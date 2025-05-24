@@ -3,6 +3,8 @@ import { NextFunction, Request, Response } from "express";
 import { verifyToken } from "../helpers/verifyToken";
 import { userJwtPayload } from "../helpers/interfaces";
 import { prisma } from "../helpers/prismaDb";
+import { redisClient } from "../helpers/redisClient";
+import { User } from "@prisma/client";
 
 export const studentAuthMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -12,51 +14,66 @@ export const studentAuthMiddleware = async (req: Request, res: Response, next: N
             res.status(401).json({ message: "Unauthorized." })
         }
 
+
         // verify token
         const decodedToken = verifyToken(token) as userJwtPayload;
-        if (!decodedToken || !decodedToken.userId || !decodedToken?.collegeCode || !decodedToken?.email) {
+        if (!decodedToken || !decodedToken.userId || !decodedToken?.collegeCode || !decodedToken?.email || !decodedToken?.isEmailVerified) {
             res.status(401).json({ message: "Invalid or expired token" })
         }
 
-        // check is ip verified
-        // const ip = await prisma.ipAddressess.findFirst({
-        //     where: {
-        //         ipAddress: req.ip || '',
-        //         isVerified: true,
-        //         userId: decodedToken?.userId
-        //     }
-        // })
-        // if (!ip) {
-        //     res.status(400).json({ message: "This ip address is not verified.", ip: req.ip || '' })
-        // }
 
         // find college
-        const college = await prisma.college.findUnique({
-            where: {
-                code: decodedToken?.collegeCode
+        let college;
+        const collegeDataFromRedis = await redisClient.hgetall(`college:${decodedToken?.collegeCode}`);
+        if (!collegeDataFromRedis.id || (collegeDataFromRedis?.code != decodedToken?.collegeCode)) {
+            college = await prisma.college.findUnique({
+                where: {
+                    code: decodedToken?.collegeCode
+                }
+            })
+            if (!college) {
+                res.status(400).json({ message: "Invalid college code" })
+                return;
             }
-        })
-        if (!college) {
-            res.status(400).json({ message: "Invalid college code" })
+            await redisClient.hset(`college:${decodedToken?.collegeCode}`, {
+                id: college?.id,
+                code: college?.code
+            });
+            await redisClient.expire(`college:${decodedToken?.collegeCode}`, 60 * 60 * 24 * 7);
         }
 
+
         // find then user
-        const user = await prisma.user.findUnique({
-            where: {
-                id: decodedToken?.userId,
-                email: decodedToken?.email,
-                collegeId: college?.id,
-            },
-        })
-        if (!user) {
-            res.status(400).json({ message: "Invalid or expired token." })
+        let user;
+        let dataToBeStored;
+        const userDataFromRedis = await redisClient.hgetall(`user:${decodedToken?.userId}:data`) as unknown as User;
+        if (!userDataFromRedis.id) {
+            user = await prisma.user.findUnique({
+                where: {
+                    id: decodedToken?.userId,
+                    email: decodedToken?.email,
+                    collegeId: collegeDataFromRedis?.id || college?.id,
+                },
+            })
+            if (!user) {
+                res.status(400).json({ message: "Invalid or expired token." })
+                return;
+            }
+
+            dataToBeStored = {
+                name: user?.name,
+                email: user?.email,
+                phoneNumber: user?.phoneNumber,
+                studentId: user?.studentId
+            };
+
+            await redisClient.hset(`user:${user?.id}:data`, dataToBeStored);
+            await redisClient.expire(`user:${user?.id}:data`, 60 * 60 * 24 * 7);
         }
-        (req as any).user = {
-            name: user?.name,
-            email: user?.email,
-            phoneNumber: user?.phoneNumber,
-            studentId: user?.studentId,
-        };
+
+
+        // pass user to the request object
+        (req as any).user = userDataFromRedis?.id ? userDataFromRedis : dataToBeStored;
 
         next()
     } catch (error) {

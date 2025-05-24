@@ -3,6 +3,12 @@ export interface userJwtPayload {
     userId: string;
     email: string;
     collegeCode: 'GICCL' | string
+    isEmailVerified: boolean;
     iat?: number;
     exp?: number;
+}
+
+export interface redisVerificationCode {
+    code: string;
+    id: string
 }

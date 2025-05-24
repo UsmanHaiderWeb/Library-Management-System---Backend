@@ -39,7 +39,6 @@ studentRouter.get('/test', async (req, res) => {
         res.json({ college });
         
     } catch (error: any) {
-        console.log("error: ", error.message);
-        res.status(400).json({ error: error.message });
+        res.status(500).json({ error: error.message });
     }
 });

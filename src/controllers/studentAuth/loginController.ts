@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
 import { prisma } from '../../helpers/prismaDb';
+import { redisClient } from '../../helpers/redisClient';
 
 // Login controller
 export const loginController = async (req: Request, res: Response): Promise<void> => {
@@ -36,33 +37,58 @@ export const loginController = async (req: Request, res: Response): Promise<void
             return;
         }
 
+
         // Generate JWT token
         const token = jwt.sign(
             {
                 userId: user.id,
                 email: user.email,
                 collegeCode: user.College?.code,
+                isEmailVerified: user?.isEmailVerified
             },
             process.env.JWT_SECRET || 'your-secret-key',
-            { expiresIn: '7d' }
+            { expiresIn: '2h' }
         );
 
-        res.json({
+
+        // check: does the email of the user is validated
+        if (!user.isEmailVerified) {
+            // generate an otp code and email the code to the user
+            const code = Math.floor(Math.random() * 900000) + 100000 as number;
+
+            // add the code to the database
+            const generatedVerificationCodeDocument = await prisma.verificationToken.create({
+                data: {
+                    token: code.toString(),
+                    type: 'EMAIL_VERIFICATION',
+                    userId: user.id,
+                    expiresAt: new Date(Date.now() + (60 * 60 * 2))
+                }
+            })
+
+            // store the token in redis
+            await redisClient.hset(`user:${user.id}:code`, {
+                code: code.toString(),
+                id: generatedVerificationCodeDocument.id
+            });
+            await redisClient.expire(`user:${user.id}:code`, 60 * 60 * 2);
+
+            // send the response
+            res.status(200).json({
+                message: 'An email has been sent to you to verify your email',
+                temporaryToken: token
+            });
+            return;
+        }
+
+        // store the token in redis
+        await redisClient.set(`user:${user.id}:token`, token, 'EX', 60 * 60 * 24 * 7);
+
+
+        // send the response
+        res.status(201).json({
             message: 'Login successful',
             token,
-            // user: {
-            //     id: user.id,
-            //     name: user.name,
-            //     email: user.email,
-            //     studentId: user.studentId,
-            //     isVerifiedByAdmin: user.isVerifiedByAdmin,
-            //     collegeId: user.collegeId,
-            //     college: user.College ? {
-            //         id: user.College.id,
-            //         name: user.College.name,
-            //         code: user.College.code
-            //     } : null
-            // }
         });
     } catch (error) {
         console.error('Login error:', error);

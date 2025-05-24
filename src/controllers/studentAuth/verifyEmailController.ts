@@ -2,11 +2,14 @@ import express from 'express';
 import { verifyToken } from '../../helpers/verifyToken';
 import { userJwtPayload } from '../../helpers/interfaces';
 import { prisma } from '../../helpers/prismaDb';
+import { redisClient } from '../../helpers/redisClient';
+import { VerificationToken } from '@prisma/client';
+import jwt from 'jsonwebtoken';
 
 export const verifyEmailController = async (req: express.Request, res: express.Response): Promise<void> => {
     try {
         const { verificationCode } = req.body;
-        const token = req.headers.authorization?.split(' ')[1];
+        const token = req.headers.authorization?.split('Bearer ')[1];
 
         if (!token) {
             res.status(401).json({
@@ -15,6 +18,17 @@ export const verifyEmailController = async (req: express.Request, res: express.R
             return;
         }
 
+
+        // Verify the JWT token and get user ID
+        const decodedUserData = verifyToken(token) as userJwtPayload;
+        if (!decodedUserData || !decodedUserData.userId || !decodedUserData.email || !decodedUserData.collegeCode) {
+            res.status(401).json({
+                message: 'Invalid or expired token'
+            });
+            return;
+        }
+
+        
         if (!verificationCode || verificationCode.length !== 6) {
             res.status(400).json({
                 message: 'Please provide a valid 6-digit verification code'
@@ -22,39 +36,38 @@ export const verifyEmailController = async (req: express.Request, res: express.R
             return;
         }
 
-        // Verify the JWT token and get user ID
-        const decoded = verifyToken(token) as userJwtPayload;
-        if (!decoded || !decoded.userId || !decoded.email || !decoded.collegeCode) {
-            res.status(401).json({
-                message: 'Invalid or expired token'
-            });
-            return;
-        }
 
-        // Find the verification token in the database
-        const verificationToken = await prisma.verificationToken.findFirst({
-            where: {
-                userId: decoded.userId,
-                token: verificationCode,
-                type: 'EMAIL_VERIFICATION',
-                expiresAt: {
-                    gt: new Date() // Check if token hasn't expired
+        // Find the verification token in redis or in the database (if not present in redis)
+        let verificationCodeFromDB: VerificationToken | null;
+        const verificationCodeDocumentFromRedis = await redisClient.hgetall(`user:${decodedUserData.userId}:code`);
+        
+        if(!verificationCodeDocumentFromRedis.code || !verificationCodeDocumentFromRedis.id || (verificationCodeDocumentFromRedis.code != verificationCode)){
+            verificationCodeFromDB = await prisma.verificationToken.findFirst({
+                where: {
+                    userId: decodedUserData.userId,
+                    token: verificationCode,
+                    type: 'EMAIL_VERIFICATION',
+                    expiresAt: {
+                        gt: new Date() // Check if token hasn't expired
+                    }
                 }
-            }
-        });
-
-        if (!verificationToken) {
-            res.status(400).json({
-                message: 'Invalid or expired verification code'
             });
-            return;
+
+
+            if (!verificationCodeFromDB) {
+                res.status(400).json({
+                    message: 'Invalid or expired verification code'
+                });
+                return;
+            }
         }
+
 
         await prisma.$transaction(async (prisma) => {
             // Update user's email verification status
             await prisma.user.update({
                 where: {
-                    id: decoded.userId
+                    id: decodedUserData.userId
                 },
                 data: {
                     isEmailVerified: true
@@ -62,17 +75,38 @@ export const verifyEmailController = async (req: express.Request, res: express.R
             });
 
             // Delete the used verification token
-            await prisma.verificationToken.delete({
-                where: {
-                    id: verificationToken.id
-                }
+            if (verificationCodeDocumentFromRedis.id || (verificationCodeFromDB as VerificationToken).id) {
+                await prisma.verificationToken.delete({
+                    where: {
+                        id: verificationCodeDocumentFromRedis.id || (verificationCodeFromDB as VerificationToken).id,
+                        userId: decodedUserData.userId
+                    }
+                });
+            }
+
+            await redisClient.del(`user:${decodedUserData.userId}:code`);
+            
+            
+
+            // create new access token
+            const accessToken = jwt.sign(
+                {
+                    userId: decodedUserData.userId,
+                    email: decodedUserData.email,
+                    collegeCode: decodedUserData.collegeCode,
+                },
+                process.env.JWT_SECRET || 'your-secret-key',
+                { expiresIn: '7d' }
+            );
+            await redisClient.set(`user:${decodedUserData.userId}:token`, accessToken);
+
+
+
+            res.status(200).json({
+                message: 'Email verified successfully',
+                accessToken
             });
         })
-
-        res.status(200).json({
-            message: 'Email verified successfully'
-        });
-
     } catch (error) {
         console.error('Error in verifyEmailController:', error);
         res.status(500).json({
