@@ -1,4 +1,4 @@
-import { body, header } from "express-validator";
+import { body } from "express-validator";
 
 
 // Validation login middleware
@@ -31,4 +31,42 @@ export const validateVerificationCodeMiddleware = [
         .withMessage('Verification code must be exactly 6 digits')
         .isNumeric()
         .withMessage('Verification code must contain only numbers'),
+];
+
+// validate create book body data
+export const validateCreateBookBodyDataMiddleware = [
+    body('bookNumber')
+        .notEmpty().withMessage('Book number is required'),
+
+    body('bookName')
+        .notEmpty().withMessage('Book name is required')
+        .isString().withMessage('Book name must be a string'),
+
+    body('author')
+        .notEmpty().withMessage('Author name is required')
+        .isString().withMessage('Author name must be a string'),
+
+    body('genre')
+        .notEmpty().withMessage('Genre is required')
+        .isString().withMessage('Genre must be a string'),
+
+    body('image')
+        .notEmpty().withMessage('Image URL is required')
+        .isURL().withMessage('Image must be a valid URL'),
+
+    body('bgColor')
+        .notEmpty().withMessage('Background color is required')
+        .matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Background color must be a valid hex color (e.g., #FF0000)'),
+
+    body('totalBooks')
+        .isInt({ min: 1 }).withMessage('Total books count is required.'),
+
+    body('almirahNumber')
+        .isInt({ min: 1 }).withMessage('Almirah Number is required.'),
+
+    body('shelfNumber')
+        .isInt({ min: 1 }).withMessage('Shelf Number is required.'),
+
+    body('isOnline')
+        .isBoolean().withMessage('Online status must be a boolean value'),
 ];

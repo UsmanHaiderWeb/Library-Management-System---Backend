@@ -25,12 +25,15 @@ model College {
 
 model Book {
     id               String             @id @default(uuid())
+    bookNumber       String             @db.Text
     bookName         String             @db.Text
     author           String             @db.VarChar(50)
     genre            String             @db.LongText
     image            String             @db.LongText
     bgColor          String             @db.VarChar(9)
     totalBooks       Int
+    almirahNumber    Int                @db.MediumInt
+    shelfNumber      Int                @db.MediumInt
     createdAt        DateTime           @default(now())
     updatedAt        DateTime           @updatedAt
     isOnline         Boolean            @default(false) // new
@@ -46,7 +49,7 @@ model Book {
 model BookCopy {
     id           String         @id @default(uuid())
     bookId       String
-    book         Book           @relation(fields: [bookId], references: [id])
+    book         Book           @relation(fields: [bookId], references: [id], onDelete: Cascade)
     isBorrowed   Boolean        @default(false)
     borrowedBook BorrowedBook[]
 

@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import express from 'express';
-import { signupController } from '../controllers/studentAuth/signupController';
+import { signupController } from '../controllers/studentAuthControllers/signupController';
 import { validateLoginFieldsMiddleware, validateSignupFieldsMiddleware, validateVerificationCodeMiddleware } from '../middlewares/ValidateFormFields';
-import { loginController } from '../controllers/studentAuth/loginController';
-import { verifyEmailController } from '../controllers/studentAuth/verifyEmailController';
+import { loginController } from '../controllers/studentAuthControllers/loginController';
+import { verifyEmailController } from '../controllers/studentAuthControllers/verifyEmailController';
 import { getUserDetailsController } from '../controllers/userControllers/getUserDetailsController';
 import { prisma } from '../helpers/prismaDb';
 import { studentAuthMiddleware } from '../middlewares/studentAuthMiddleware';
@@ -14,7 +14,7 @@ export const studentRouter = express.Router();
 studentRouter.post('/signup', validateSignupFieldsMiddleware, signupController);
 studentRouter.post('/login', validateLoginFieldsMiddleware, loginController);
 studentRouter.post('/verify-email', validateVerificationCodeMiddleware, verifyEmailController);
-studentRouter.get('/getDetails', studentAuthMiddleware, getUserDetailsController);
+studentRouter.get('/getUserDetails', studentAuthMiddleware, getUserDetailsController);
 
 studentRouter.get('/test', async (req, res) => {
     let college;

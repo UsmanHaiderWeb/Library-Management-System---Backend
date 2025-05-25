@@ -1,5 +1,6 @@
+import { Request } from "express";
+
 export interface userJwtPayload {
-    // Define your expected payload shape here
     userId: string;
     email: string;
     collegeCode: 'GICCL' | string
@@ -8,7 +9,24 @@ export interface userJwtPayload {
     exp?: number;
 }
 
+export interface adminJwtPayload {
+    adminId: string;
+    email: string;
+    collegeCode: 'GICCL' | string
+    iat?: number;
+    exp?: number;
+}
+
 export interface redisVerificationCode {
     code: string;
     id: string
+}
+
+export interface RequestWithAdmin extends Request {
+    admin: {
+        id: string;
+        name: string;
+        email: string;
+        collegeId: string
+    };
 }

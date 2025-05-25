@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
-import { userJwtPayload } from './interfaces';
+import { adminJwtPayload, userJwtPayload } from './interfaces';
 
-export const verifyToken = (token: string): userJwtPayload | null => {
+export const verifyToken = (token: string): userJwtPayload | adminJwtPayload | null => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as userJwtPayload;
         return decoded;

@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextFunction, Request, Response } from "express";
 import { verifyToken } from "../helpers/verifyToken";
-import { userJwtPayload } from "../helpers/interfaces";
+import { adminJwtPayload } from "../helpers/interfaces";
 import { prisma } from "../helpers/prismaDb";
 import { redisClient } from "../helpers/redisClient";
-import { User } from "@prisma/client";
+import { Admin } from "@prisma/client";
 
-export const studentAuthMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const adminAuthMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
         const token = req?.headers?.authorization?.split('Bearer ')[1] || '';
 
@@ -17,8 +17,8 @@ export const studentAuthMiddleware = async (req: Request, res: Response, next: N
 
 
         // verify token
-        const decodedToken = verifyToken(token) as userJwtPayload;
-        if (!decodedToken || !decodedToken.userId || !decodedToken?.collegeCode || !decodedToken?.email || !decodedToken?.isEmailVerified) {
+        const decodedToken = verifyToken(token) as adminJwtPayload;
+        if (!decodedToken || !decodedToken.adminId || !decodedToken?.collegeCode || !decodedToken?.email) {
             res.status(401).json({ message: "Invalid or expired token" })
             return;
         }
@@ -46,41 +46,40 @@ export const studentAuthMiddleware = async (req: Request, res: Response, next: N
         }
 
 
-        // find then user
-        let user;
+        // find then admin
+        let admin;
         let dataToBeStored;
-        const userDataFromRedis = await redisClient.hgetall(`user:${decodedToken?.userId}:data`) as unknown as User;
-        if (!userDataFromRedis.id) {
-            user = await prisma.user.findUnique({
+        const adminDataFromRedis = await redisClient.hgetall(`admin:${decodedToken?.adminId}:data`) as unknown as Admin;
+        if (!adminDataFromRedis.id) {
+            admin = await prisma.admin.findUnique({
                 where: {
-                    id: decodedToken?.userId,
+                    id: decodedToken?.adminId,
                     email: decodedToken?.email,
                     collegeId: collegeDataFromRedis?.id || college?.id,
                 },
             })
-            if (!user) {
+            if (!admin) {
                 res.status(400).json({ message: "Invalid or expired token." })
                 return;
             }
 
             dataToBeStored = {
-                name: user?.name,
-                email: user?.email,
-                phoneNumber: user?.phoneNumber,
-                studentId: user?.studentId,
+                name: admin?.name,
+                email: admin?.email,
+                collegeId: collegeDataFromRedis.id || college?.id,
             };
 
-            await redisClient.hset(`user:${user?.id}:data`, dataToBeStored);
-            await redisClient.expire(`user:${user?.id}:data`, 60 * 60 * 24 * 7);
+            await redisClient.hset(`admin:${admin?.id}:data`, dataToBeStored);
+            await redisClient.expire(`admin:${admin?.id}:data`, 60 * 60 * 24 * 7);
         }
 
 
-        // pass user to the request object
-        (req as any).user = userDataFromRedis?.id ? userDataFromRedis : dataToBeStored;
+        // pass admin to the request object
+        (req as any).admin = adminDataFromRedis?.id ? adminDataFromRedis : dataToBeStored;
 
         next()
     } catch (error) {
-        console.error('get user details middleware error:', error);
+        console.error('get admin details middleware error:', error);
         res.status(500).json({ message: 'Server error' });
         return;
     }
