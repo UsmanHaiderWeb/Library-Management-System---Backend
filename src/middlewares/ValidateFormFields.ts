@@ -42,6 +42,9 @@ export const validateCreateBookBodyDataMiddleware = [
         .notEmpty().withMessage('Book name is required')
         .isString().withMessage('Book name must be a string'),
 
+    body('summary')
+        .notEmpty().withMessage('Book summary is required'),
+
     body('author')
         .notEmpty().withMessage('Author name is required')
         .isString().withMessage('Author name must be a string'),

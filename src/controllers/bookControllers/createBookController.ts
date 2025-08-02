@@ -7,6 +7,7 @@ import { RequestWithAdmin } from '../../helpers/interfaces';
 interface CreateBookRequest {
     bookNumber: string;
     bookName: string;
+    summary: string;
     author: string;
     genre: string;
     image: string;
@@ -39,6 +40,7 @@ export const createBookController = async (req: Request, res: Response): Promise
         const {
             bookNumber,
             bookName,
+            summary,
             author,
             genre,
             image,
@@ -72,6 +74,7 @@ export const createBookController = async (req: Request, res: Response): Promise
             data: {
                 bookName,
                 bookNumber,
+                summary,
                 author,
                 genre,
                 image,

@@ -4,7 +4,7 @@ import { signupController } from '../controllers/studentAuthControllers/signupCo
 import { validateLoginFieldsMiddleware, validateSignupFieldsMiddleware, validateVerificationCodeMiddleware } from '../middlewares/ValidateFormFields';
 import { loginController } from '../controllers/studentAuthControllers/loginController';
 import { verifyEmailController } from '../controllers/studentAuthControllers/verifyEmailController';
-import { getUserDetailsController } from '../controllers/userControllers/getUserDetailsController';
+import { getUserDetailsController } from '../controllers/studentControllers/getUserDetailsController';
 import { prisma } from '../helpers/prismaDb';
 import { studentAuthMiddleware } from '../middlewares/studentAuthMiddleware';
 
@@ -14,6 +14,8 @@ export const studentRouter = express.Router();
 studentRouter.post('/signup', validateSignupFieldsMiddleware, signupController);
 studentRouter.post('/login', validateLoginFieldsMiddleware, loginController);
 studentRouter.post('/verify-email', validateVerificationCodeMiddleware, verifyEmailController);
+
+// detail routes
 studentRouter.get('/getUserDetails', studentAuthMiddleware, getUserDetailsController);
 
 studentRouter.get('/test', async (req, res) => {

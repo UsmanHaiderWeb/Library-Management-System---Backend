@@ -26,8 +26,8 @@ export const adminAuthMiddleware = async (req: Request, res: Response, next: Nex
 
         // find college
         let college;
-        const collegeDataFromRedis = await redisClient.hgetall(`college:${decodedToken?.collegeCode}`);
-        if (!collegeDataFromRedis.id || (collegeDataFromRedis?.code != decodedToken?.collegeCode)) {
+        college = await redisClient.hgetall(`college:${decodedToken?.collegeCode}`);
+        if (!college.id || !college?.code || (college?.code != decodedToken?.collegeCode) || (decodedToken?.collegeCode != college.code)) {
             college = await prisma.college.findUnique({
                 where: {
                     code: decodedToken?.collegeCode
@@ -47,15 +47,15 @@ export const adminAuthMiddleware = async (req: Request, res: Response, next: Nex
 
 
         // find then admin
-        let admin;
         let dataToBeStored;
-        const adminDataFromRedis = await redisClient.hgetall(`admin:${decodedToken?.adminId}:data`) as unknown as Admin;
-        if (!adminDataFromRedis.id) {
+        let admin;
+        admin = await redisClient.hgetall(`admin:${decodedToken?.adminId}:data`) as unknown as Admin;
+        if (!admin?.id || !admin?.collegeId) {
             admin = await prisma.admin.findUnique({
                 where: {
                     id: decodedToken?.adminId,
                     email: decodedToken?.email,
-                    collegeId: collegeDataFromRedis?.id || college?.id,
+                    collegeId: college?.id,
                 },
             })
             if (!admin) {
@@ -64,9 +64,10 @@ export const adminAuthMiddleware = async (req: Request, res: Response, next: Nex
             }
 
             dataToBeStored = {
+                id: admin?.id,
                 name: admin?.name,
                 email: admin?.email,
-                collegeId: collegeDataFromRedis.id || college?.id,
+                collegeId: college?.id,
             };
 
             await redisClient.hset(`admin:${admin?.id}:data`, dataToBeStored);
@@ -75,7 +76,7 @@ export const adminAuthMiddleware = async (req: Request, res: Response, next: Nex
 
 
         // pass admin to the request object
-        (req as any).admin = adminDataFromRedis?.id ? adminDataFromRedis : dataToBeStored;
+        (req as any).admin = admin?.id ? admin : dataToBeStored;
 
         next()
     } catch (error) {
