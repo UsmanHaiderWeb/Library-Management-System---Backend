@@ -10,6 +10,8 @@ import { getAllBooksController } from '../controllers/bookControllers/getAllBook
 import { allBorrowBookRequestsController } from '../controllers/bookControllers/allBorrowBookRequestsController';
 import { allBorrowBooksController } from '../controllers/bookControllers/allBorrowBooksController';
 import { changeStatusForBorrowBookRequestController } from '../controllers/bookControllers/changeStatusForBorrowBookRequestController';
+import { changeReturnStatusForBorrowedBookController } from '../controllers/bookControllers/changeReturnStatusForBorrowedBookController';
+import { borrowedBooksHistoryController } from '../controllers/bookControllers/borrowedBooksHistoryController';
 
 export const adminRouter = express.Router();
 
@@ -26,5 +28,7 @@ adminRouter.get('/getAllUsers', adminAuthMiddleware, getAllUsersController);
 // books related routes
 adminRouter.get('/getAllBooks', adminAuthMiddleware, getAllBooksController);
 adminRouter.get('/all-borrow-requests', adminAuthMiddleware, allBorrowBookRequestsController);
-adminRouter.get('/all-borrowed-books', adminAuthMiddleware, allBorrowBooksController);
+adminRouter.get('/borrowed-books/all', adminAuthMiddleware, allBorrowBooksController);
+adminRouter.get('/borrowed-books/history', adminAuthMiddleware, borrowedBooksHistoryController);
 adminRouter.post('/borrow-requests/change-status/:borrowRequestId', adminAuthMiddleware, changeStatusForBorrowBookRequestController);
+adminRouter.post('/borrowed-books/:borrowedBookId/change-status', adminAuthMiddleware, changeReturnStatusForBorrowedBookController);

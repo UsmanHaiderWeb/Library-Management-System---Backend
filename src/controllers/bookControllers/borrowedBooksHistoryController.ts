@@ -3,7 +3,7 @@ import { Request, response, Response } from "express";
 import { RequestWithAdmin } from "../../helpers/interfaces";
 import { prisma } from "../../helpers/prismaDb";
 
-export const allBorrowBooksController = async (req: Request, res: Response) => {
+export const borrowedBooksHistoryController = async (req: Request, res: Response) => {
     try {
         const admin = (req as RequestWithAdmin).admin;
         const { pageNumber, searchQuery } = (req as any).query as { pageNumber: number, searchQuery: string };
@@ -11,7 +11,7 @@ export const allBorrowBooksController = async (req: Request, res: Response) => {
         // find whereClause to pass to prisma
         const whereClause: any = {
             collegeId: admin.collegeId,
-            status: "borrowed"
+            status: "returned"
         };
 
         if (searchQuery?.trim() !== '') {
@@ -40,6 +40,7 @@ export const allBorrowBooksController = async (req: Request, res: Response) => {
         const totalBorrowedBooksCount = await prisma.borrowedBook.count({
             where: whereClause
         });
+
         if (!totalBorrowedBooksCount) {
             res.status(201).json({ requests: [], totalPages: 0 })
             return;
