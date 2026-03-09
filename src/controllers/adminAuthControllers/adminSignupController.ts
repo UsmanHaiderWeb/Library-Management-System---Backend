@@ -1,16 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
-import { prisma } from '../../helpers/prismaDb';
-
-interface signupBody {
-    email: string,
-    password: string,
-    name: string,
-    collegeCode: string
-}
-
+import { AdminService } from '../../services/admin.service';
 
 // Signup controller
 export const adminSignupController = async (req: Request, res: Response): Promise<void> => {
@@ -22,62 +13,20 @@ export const adminSignupController = async (req: Request, res: Response): Promis
             return;
         }
 
-        const { email, password, name, collegeCode }: signupBody = req.body;
+        const { email, password, name, collegeCode } = req.body;
 
-        // Check if college exists
-        const college = await prisma.college.findUnique({
-            where: { code: collegeCode }
+        const { token } = await AdminService.signup({ email, password, name, collegeCode });
+
+        res.status(201).json({
+            message: 'Admin created successfully',
+            token,
         });
 
-        if (!college) {
-            res.status(400).json({ message: 'Invalid college code.' });
+    } catch (error: any) {
+        if (error.message === 'Invalid college code.' || error.message === 'Admin already exists') {
+            res.status(400).json({ message: error.message });
             return;
         }
-
-        // Check if admin already exists
-        const existingUser = await prisma.admin.findUnique({
-            where: { email }
-        });
-
-        if (existingUser) {
-            res.status(400).json({ message: 'Admin already exists' });
-            return;
-        }
-
-        // Hash password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        await prisma.$transaction(async (prisma) => {
-            // Create admin
-            const user = await prisma.admin.create({
-                data: {
-                    email,
-                    password: hashedPassword,
-                    name,
-                    collegeId: college.id
-                }
-            });
-    
-            const token = jwt.sign(
-                {
-                    userId: user.id,
-                    email: user.email,
-                    collegeCode: college.code
-                },
-                process.env.JWT_SECRET || 'your-secret-key',
-                { expiresIn: '1h' }
-            );
-
-            // send the response back to frontend
-            res.status(201).json({
-                message: 'Admin created successfully',
-                token,
-            });
-        })
-
-        return;
-    } catch (error) {
         console.error('Admin Signup error:', error);
         res.status(500).json({ message: 'Server error' });
     }

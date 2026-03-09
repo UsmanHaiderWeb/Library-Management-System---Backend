@@ -5,158 +5,162 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "mysql"
-    url      = env("DATABASE_URL")
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model College {
-    id             String             @id @default(uuid())
-    name           String             @db.VarChar(100)
-    code           String             @unique @db.VarChar(10) // e.g., GCUF, UCP
-    admins         Admin[]
-    users          User[]
-    books          Book[]
-    borrowRequests BorrowedRequests[]
-    borrowBooks    BorrowedBook[]
-    createdAt      DateTime           @default(now())
+  id             String             @id @default(uuid())
+  name           String             @db.VarChar(100)
+  code           String             @unique @db.VarChar(10) // e.g., GCUF, UCP
+  admins         Admin[]
+  users          User[]
+  books          Book[]
+  borrowRequests BorrowedRequests[]
+  borrowBooks    BorrowedBook[]
+  createdAt      DateTime           @default(now())
 }
 
 model Book {
-    id               String             @id @default(uuid())
-    bookNumber       String             @db.Text
-    bookName         String             @db.Text
-    summary          String             @db.LongText
-    author           String             @db.VarChar(50)
-    genre            String             @db.LongText
-    image            String             @db.LongText
-    bgColor          String             @db.VarChar(9)
-    totalBooks       Int
-    almirahNumber    Int                @db.MediumInt
-    shelfNumber      Int                @db.MediumInt
-    createdAt        DateTime           @default(now())
-    updatedAt        DateTime           @updatedAt
-    isOnline         Boolean            @default(false) // new
-    onlineFileUrl    String?            @db.LongText // optional: PDF / epub / link
-    copies           BookCopy[]
-    BorrowedRequests BorrowedRequests[]
-    College          College?           @relation(fields: [collegeId], references: [id])
-    collegeId        String?
+  id               String             @id @default(uuid())
+  bookNumber       String             @db.Text
+  bookName         String             @db.Text
+  summary          String             @db.LongText
+  author           String             @db.VarChar(50)
+  genre            String             @db.LongText
+  image            String             @db.LongText
+  bgColor          String             @db.VarChar(9)
+  totalBooks       Int
+  almirahNumber    Int                @db.MediumInt
+  shelfNumber      Int                @db.MediumInt
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  isOnline         Boolean            @default(false) // new
+  onlineFileUrl    String?            @db.LongText // optional: PDF / epub / link
+  copies           BookCopy[]
+  BorrowedRequests BorrowedRequests[]
+  College          College?           @relation(fields: [collegeId], references: [id])
+  collegeId        String?
 
-    @@index([id, collegeId])
+  @@index([id, collegeId])
 }
 
 model BookCopy {
-    id           String         @id @default(uuid())
-    bookId       String
-    book         Book           @relation(fields: [bookId], references: [id], onDelete: Cascade)
-    isBorrowed   Boolean        @default(false)
-    borrowedBook BorrowedBook[]
+  id           String         @id @default(uuid())
+  bookId       String
+  book         Book           @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  isBorrowed   Boolean        @default(false)
+  borrowedBook BorrowedBook[]
 
-    @@index([id, bookId])
+  @@index([id, bookId])
 }
 
 model User {
-    id                 String              @id @default(uuid())
-    name               String              @db.VarChar(25)
-    studentId          String              @db.VarChar(10)
-    email              String              @unique
-    isEmailVerified    Boolean             @default(false)
-    password           String              @db.VarChar(150)
-    phoneNumber        String?             @db.VarChar(13)
-    isVerifiedByAdmin  Boolean             @default(false)
-    createdAt          DateTime            @default(now())
-    updatedAt          DateTime            @updatedAt
-    batchYear          Int?
-    borrowedBooks      BorrowedBook[] // one-to-many relation
-    borrowedRequests   BorrowedRequests[]
-    verificationTokens VerificationToken[]
-    ipAddressess       ipAddressess[]
-    College            College?            @relation(fields: [collegeId], references: [id])
-    collegeId          String?
+  id                 String              @id @default(uuid())
+  name               String              @db.VarChar(25)
+  studentId          String              @db.VarChar(10)
+  email              String              @unique
+  isEmailVerified    Boolean             @default(false)
+  password           String              @db.VarChar(150)
+  phoneNumber        String?             @db.VarChar(13)
+  isVerifiedByAdmin  Boolean             @default(false)
+  fineBalance        Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  batchYear          Int?
+  borrowedBooks      BorrowedBook[] // one-to-many relation
+  borrowedRequests   BorrowedRequests[]
+  verificationTokens VerificationToken[]
+  ipAddressess       ipAddressess[]
+  College            College?            @relation(fields: [collegeId], references: [id])
+  collegeId          String?
 
-    @@index([batchYear, isVerifiedByAdmin, id, email, collegeId])
+  @@index([batchYear, isVerifiedByAdmin, id, email, collegeId])
 }
 
 model Admin {
-    id        String   @id @default(uuid())
-    name      String   @db.VarChar(25)
-    email     String   @unique
-    password  String   @db.VarChar(150)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    collegeId String
-    College   College  @relation(fields: [collegeId], references: [id])
+  id                 String              @id @default(uuid())
+  name               String              @db.VarChar(25)
+  email              String              @unique
+  password           String              @db.VarChar(150)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  collegeId          String
+  College            College             @relation(fields: [collegeId], references: [id])
+  verificationTokens VerificationToken[]
 
-    @@index([id, email, collegeId])
+  @@index([id, email, collegeId])
 }
 
 model BorrowedBook {
-    id         String             @id @default(uuid())
-    bookCopy   BookCopy           @relation(fields: [bookCopyId], references: [id], onDelete: Cascade)
-    bookCopyId String
-    user       User               @relation(fields: [userId], references: [id])
-    userId     String
-    borrowedOn DateTime           @default(now())
-    dueDate    DateTime?
-    returnedOn DateTime?
-    status     BorrowedBookStatus @default(borrowed)
-    College    College?           @relation(fields: [collegeId], references: [id])
-    collegeId  String?
+  id         String             @id @default(uuid())
+  bookCopy   BookCopy           @relation(fields: [bookCopyId], references: [id], onDelete: Cascade)
+  bookCopyId String
+  user       User               @relation(fields: [userId], references: [id])
+  userId     String
+  borrowedOn DateTime           @default(now())
+  dueDate    DateTime?
+  returnedOn DateTime?
+  status     BorrowedBookStatus @default(borrowed)
+  College    College?           @relation(fields: [collegeId], references: [id])
+  collegeId  String?
 
-    @@index([id, userId, bookCopyId, collegeId])
+  @@index([id, userId, bookCopyId, collegeId])
 }
 
 enum BorrowedBookStatus {
-    borrowed
-    returned
+  borrowed
+  returned
 }
 
 model BorrowedRequests {
-    id          String              @id @default(uuid())
-    book        Book                @relation(fields: [bookId], references: [id], onDelete: Cascade)
-    bookId      String
-    user        User                @relation(fields: [userId], references: [id])
-    userId      String
-    requestedOn DateTime            @default(now())
-    status      BorrowRequestStatus @default(pending)
-    College     College?            @relation(fields: [collegeId], references: [id])
-    collegeId   String?
+  id          String              @id @default(uuid())
+  book        Book                @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  bookId      String
+  user        User                @relation(fields: [userId], references: [id])
+  userId      String
+  requestedOn DateTime            @default(now())
+  status      BorrowRequestStatus @default(pending)
+  College     College?            @relation(fields: [collegeId], references: [id])
+  collegeId   String?
 
-    @@index([userId, bookId, id, status])
+  @@index([userId, bookId, id, status])
 }
 
 enum BorrowRequestStatus {
-    pending
-    accepted
-    rejected
+  pending
+  accepted
+  rejected
 }
 
 model VerificationToken {
-    id        String    @id @default(uuid())
-    token     String    @db.VarChar(250) // six-digit code or verification link
-    userId    String
-    user      User      @relation(fields: [userId], references: [id])
-    type      TokenType @default(EMAIL_VERIFICATION) // or PASSWORD_RESET
-    expiresAt DateTime
+  id        String    @id @default(uuid())
+  token     String    @db.VarChar(250) // six-digit code or verification link
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id])
+  adminId   String?
+  admin     Admin?    @relation(fields: [adminId], references: [id])
+  type      TokenType @default(EMAIL_VERIFICATION) // or PASSWORD_RESET
+  expiresAt DateTime
 
-    @@index([userId, type, id])
+  @@index([userId, adminId, type, id])
 }
 
 enum TokenType {
-    EMAIL_VERIFICATION
-    PASSWORD_RESET
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
 }
 
 model ipAddressess {
-    id         String  @id @default(uuid())
-    ipAddress  String  @db.VarChar(40)
-    isVerified Boolean @default(false)
-    userId     String
-    user       User    @relation(fields: [userId], references: [id])
+  id         String  @id @default(uuid())
+  ipAddress  String  @db.VarChar(40)
+  isVerified Boolean @default(false)
+  userId     String
+  user       User    @relation(fields: [userId], references: [id])
 
-    @@index([userId, id, ipAddress])
+  @@index([userId, id, ipAddress])
 }

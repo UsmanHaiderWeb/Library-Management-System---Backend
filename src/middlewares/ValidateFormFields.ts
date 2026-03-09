@@ -34,42 +34,38 @@ export const validateVerificationCodeMiddleware = [
 ];
 
 // validate create book body data
+const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+
+const requiredStringField = (field: string, label: string) =>
+    body(field)
+        .notEmpty().withMessage(`${label} is required`)
+        .isString().withMessage(`${label} must be a string`);
+
 export const validateCreateBookBodyDataMiddleware = [
-    body('bookNumber')
-        .notEmpty().withMessage('Book number is required'),
-
-    body('bookName')
-        .notEmpty().withMessage('Book name is required')
-        .isString().withMessage('Book name must be a string'),
-
-    body('summary')
-        .notEmpty().withMessage('Book summary is required'),
-
-    body('author')
-        .notEmpty().withMessage('Author name is required')
-        .isString().withMessage('Author name must be a string'),
-
-    body('genre')
-        .notEmpty().withMessage('Genre is required')
-        .isString().withMessage('Genre must be a string'),
-
-    body('image')
-        .notEmpty().withMessage('Image URL is required')
-        .isURL().withMessage('Image must be a valid URL'),
+    body('bookNumber').notEmpty().withMessage('Book number is required'),
+    requiredStringField('bookName', 'Book name'),
+    requiredStringField('summary', 'Book summary'),
+    requiredStringField('author', 'Author name'),
+    requiredStringField('genre', 'Genre'),
+    requiredStringField('image', 'Image'),
 
     body('bgColor')
         .notEmpty().withMessage('Background color is required')
-        .matches(/^#[0-9A-Fa-f]{6}$/).withMessage('Background color must be a valid hex color (e.g., #FF0000)'),
+        .matches(hexColorRegex).withMessage('Background color must be a valid hex code'),
 
     body('totalBooks')
-        .isInt({ min: 1 }).withMessage('Total books count is required.'),
+        .isInt({ min: 1 }).withMessage('Total books count must be at least 1'),
 
     body('almirahNumber')
-        .isInt({ min: 1 }).withMessage('Almirah Number is required.'),
+        .isInt({ min: 1 }).withMessage('Almirah Number must be at least 1'),
 
     body('shelfNumber')
-        .isInt({ min: 1 }).withMessage('Shelf Number is required.'),
+        .isInt({ min: 1 }).withMessage('Shelf Number must be at least 1'),
 
     body('isOnline')
-        .isBoolean().withMessage('Online status must be a boolean value'),
+        .optional()
+        .isBoolean().withMessage('Online status must be a boolean'),
+
+    body('onlineFileUrl')
+        .optional()
 ];

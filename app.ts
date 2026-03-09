@@ -4,7 +4,6 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
 import { studentRouter } from './src/routes/studentRoutes';
-import { configVariables } from './src/configs';
 import session from 'express-session';
 import { bookRouter } from './src/routes/bookRoutes';
 import { adminRouter } from './src/routes/adminRoutes';
@@ -15,7 +14,6 @@ import './src/helpers/redisClient';
 dotenv.config();
 
 const app = express();
-const port = configVariables.port || 3000;
 
 
 // Middleware
@@ -89,7 +87,4 @@ app.use('/api/books', bookRouter);
 app.use('/api/students', studentRouter);
 
 
-// Start server
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
+export default app;

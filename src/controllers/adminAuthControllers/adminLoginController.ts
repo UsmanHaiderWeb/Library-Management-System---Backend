@@ -1,8 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
-import { prisma } from '../../helpers/prismaDb';
+import { AdminService } from '../../services/admin.service';
 
 // Login controller
 export const adminLoginController = async (req: Request, res: Response): Promise<void> => {
@@ -16,43 +15,18 @@ export const adminLoginController = async (req: Request, res: Response): Promise
 
         const { email, password } = req.body;
 
-        // Find admin
-        const admin = await prisma.admin.findUnique({
-            where: { email },
-            include: {
-                College: true
-            }
-        });
-
-        if (!admin) {
-            res.status(400).json({ message: 'Invalid credentials' });
-            return;
-        }
-
-        // Check password
-        const isMatch = await bcrypt.compare(password, admin.password);
-        if (!isMatch) {
-            res.status(400).json({ message: 'Invalid credentials' });
-            return;
-        }
-
-        // Generate JWT token
-        const token = jwt.sign(
-            {
-                adminId: admin.id,
-                email: admin.email,
-                collegeCode: admin.College?.code,
-            },
-            process.env.JWT_SECRET || 'your-secret-key',
-            { expiresIn: '7d' }
-        );
+        const { token } = await AdminService.login({ email, password });
 
         res.json({
             message: 'Admin Login successful',
             token,
         });
-    } catch (error) {
+    } catch (error: any) {
+        if (error.message === 'Invalid credentials') {
+            res.status(400).json({ message: error.message });
+            return;
+        }
         console.error('Admin Login error:', error);
         res.status(500).json({ message: 'Server error' });
     }
-}; 
+};

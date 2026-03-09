@@ -1,152 +1,144 @@
 # Library Management System Backend
 
-This is the backend API for the Library Management System. The API is built using Express.js and TypeScript.
+This is the backend API for the Library Management System, built with **Express.js**, **TypeScript**, **Prisma (MySQL)**, and **Redis**.
 
-## Authentication Routes
+## 🚀 Getting Started
 
-### Signup Route
+### Prerequisites
+- Node.js & npm
+- MySQL
+- Redis
 
-**Endpoint:** `POST /students/signup`
+### Environment Variables
+Create a `.env` file in the root directory:
+```env
+PORT=3000
+DATABASE_URL="mysql://user:password@localhost:3306/lms"
+JWT_SECRET="your-secret-key"
+Session_Secret="your-session-secret"
+REDIS_URL="redis://localhost:6379"
 
-Creates a new user account in the system.
-
-#### Request Body
-```json
-{
-    "email": "string",
-    "password": "string",
-    "name": "string",
-    "studentId": "string",
-    "phoneNumber": "string"
-}
+# ImageKit Credentials
+IMAGE_KIT_PUBLIC_KEY="your-public-key"
+IMAGE_KIT_PRIVATE_KEY="your-private-key"
+IMAGE_KIT_URL="your-url-endpoint"
 ```
 
-#### Validation Rules
-- Email must be a valid email address
-- Password must be at least 6 characters long
-- Name is required
-- Student ID is required
+---
 
-#### Response
-- **Success (201)**
-```json
-{
-    "message": "User created successfully",
-    "token": "JWT_TOKEN",
-    "user": {
-        "id": "string",
-        "name": "string",
-        "email": "string",
-        "studentId": "string",
-        "verified": boolean
-    }
-}
-```
+## 🔐 Authentication APIs
 
-- **Error (400)**
-  - If user already exists
-  - If validation fails
-- **Error (500)**
-  - Server error
+### Student Authentication
 
-### Login Route
+#### Signup
+- **Endpoint:** `POST /api/students/signup`
+- **Body:** `{ name, email, password, studentId, collegeCode }`
+- **Logic:** Creates a student user and returns a JWT.
 
-**Endpoint:** `POST /students/login`
+#### Login
+- **Endpoint:** `POST /api/students/login`
+- **Body:** `{ email, password, collegeCode }`
+- **Logic:** Authenticates student and returns a JWT.
 
-Authenticates a user and returns a JWT token.
+#### Verify Email
+- **Endpoint:** `POST /api/students/verify-email`
+- **Header:** `Authorization: Bearer <token>`
+- **Body:** `{ verificationCode }` (6-digit numeric)
+- **Logic:** Marks student email as verified.
 
-#### Request Body
-```json
-{
-    "email": "string",
-    "password": "string"
-}
-```
+### Admin Authentication
 
-#### Validation Rules
-- Email must be a valid email address
-- Password is required
+#### Signup
+- **Endpoint:** `POST /api/admin/signup`
+- **Body:** `{ name, email, password, collegeCode }`
+- **Logic:** Creates an admin for a specific college.
 
-#### Response
-- **Success (200)**
-```json
-{
-    "message": "Login successful",
-    "token": "JWT_TOKEN",
-    "user": {
-        "id": "string",
-        "name": "string",
-        "email": "string",
-        "studentId": "string",
-        "verified": boolean
-    }
-}
-```
+#### Login
+- **Endpoint:** `POST /api/admin/login`
+- **Body:** `{ email, password }`
+- **Logic:** Authenticates admin and returns a JWT.
 
-- **Error (400)**
-  - If credentials are invalid
-  - If validation fails
-- **Error (500)**
-  - Server error
+---
 
-### Email Verification Route
+## 📚 Book Management (Admin Only)
 
-**Endpoint:** `POST /students/verify-email`
+#### Create Book
+- **Endpoint:** `POST /api/books/create`
+- **Header:** `Authorization: Bearer <Admin_Token>`
+- **Body:** `{ bookNumber, bookName, summary, author, genre, image, bgColor, totalBooks, almirahNumber, shelfNumber, isOnline?, onlineFileUrl? }`
+- **Logic:** Creates a book record and automatically generates `totalBooks` copies in the database.
 
-Verifies a user's email using a 6-digit verification code.
+#### Update Book
+- **Endpoint:** `POST /api/books/update/:bookId`
+- **Header:** `Authorization: Bearer <Admin_Token>`
+- **Body:** (Same as Create)
+- **Logic:** Updates metadata. If `totalBooks` increases, it adds new copies. If it decreases, it attempts to remove unborrowed copies.
 
-#### Headers
-```
-Authorization: Bearer <JWT_TOKEN>
-```
+#### Delete Book
+- **Endpoint:** `DELETE /api/books/delete/:bookId`
+- **Header:** `Authorization: Bearer <Admin_Token>`
+- **Logic:** Deletes the book and all associated copies/requests (Cascade).
 
-#### Request Body
-```json
-{
-    "verificationCode": "string" // 6-digit numeric code
-}
-```
+---
 
-#### Validation Rules
-- Verification code must be exactly 6 digits
-- Verification code must contain only numbers
-- Valid JWT token must be provided in Authorization header
+## 🔄 Borrowing System
 
-#### Response
-- **Success (200)**
-```json
-{
-    "message": "Email verified successfully"
-}
-```
+#### Borrow Request (Student)
+- **Endpoint:** `POST /api/books/borrow/:bookId`
+- **Header:** `Authorization: Bearer <Student_Token>`
+- **Logic:** Creates a "pending" borrow request. Limit: 2 active borrows per student (enforced via Redis/DB).
 
-- **Error (400)**
-  - If verification code is invalid or expired
-  - If validation fails
-- **Error (401)**
-  - If authentication token is missing or invalid
-- **Error (500)**
-  - Server error
+#### List All Requests (Admin)
+- **Endpoint:** `GET /api/admin/all-borrow-requests`
+- **Header:** `Authorization: Bearer <Admin_Token>`
+- **Query Params:** `pageNumber`, `searchQuery`
+- **Logic:** View all pending/accepted/rejected requests for the admin's college.
 
-## Security Features
+#### Accept/Reject Request (Admin)
+- **Endpoint:** `POST /api/admin/borrow-requests/change-status/:borrowRequestId`
+- **Header:** `Authorization: Bearer <Admin_Token>`
+- **Body:** `{ status: "accepted" | "rejected" }`
+- **Logic:** 
+  - If **Accepted**: Assigns an available `BookCopy`, creates a `BorrowedBook` record, and sets a 14-day due date.
+  - If **Rejected**: Updates request status.
 
-- Passwords are hashed using bcrypt
-- JWT tokens are used for authentication
-- Session management is implemented
-- CORS is enabled for localhost:3000
-- Input validation using express-validator
+#### Return Book (Admin)
+- **Endpoint:** `POST /api/admin/borrowed-books/:borrowedBookId/change-status`
+- **Header:** `Authorization: Bearer <Admin_Token>`
+- **Body:** `{ status: "returned" }`
+- **Logic:** Marks book as returned, releases the `BookCopy`, and clears the user's borrow count from Redis.
 
-## Environment Variables
+#### View History (Admin)
+- **Endpoint:** `GET /api/admin/borrowed-books/history`
+- **Header:** `Authorization: Bearer <Admin_Token>`
+- **Query Params:** `pageNumber`, `searchQuery`
+- **Logic:** List all returned books.
 
-The following environment variables are required:
-- `JWT_SECRET`: Secret key for JWT token generation
-- `Session_Secret`: Secret key for session management
-- `PORT`: Server port (defaults to 3000)
+---
 
-## Error Handling
+## 👤 User & Profile
 
-The API includes comprehensive error handling:
-- Validation errors return 400 status code
-- Authentication errors return 400 status code
-- Server errors return 500 status code
-- 404 errors for undefined routes 
+#### Get Student Details
+- **Endpoint:** `GET /api/students/getUserDetails`
+- **Header:** `Authorization: Bearer <Student_Token>`
+- **Logic:** Returns student info and their full borrowing history.
+
+#### Get Admin Details
+- **Endpoint:** `GET /api/admin/getAdminDetails`
+- **Header:** `Authorization: Bearer <Admin_Token>`
+- **Logic:** Returns authenticated admin info.
+
+#### List All Students (Admin)
+- **Endpoint:** `GET /api/admin/getAllUsers`
+- **Header:** `Authorization: Bearer <Admin_Token>`
+- **Query Params:** `pageNumber`, `searchQuery`
+- **Logic:** Paginated list of students in the admin's college.
+
+---
+
+## 🛠️ Infrastructure & Security
+
+- **Redis Caching:** Used to store and verify `college` and `admin` session data to reduce DB load in middlewares. Also caches student borrow counts.
+- **ImageKit:** Admin can get auth tokens for client-side uploads via `GET /api/admin/imagekit-authentication-tokens`.
+- **Validation:** Robust input validation using `express-validator`.
+- **RBAC:** Middleware ensures students cannot access admin routes and vice-versa.

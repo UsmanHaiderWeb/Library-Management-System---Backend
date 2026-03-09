@@ -1,79 +1,53 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
-import { prisma } from '../../helpers/prismaDb';
 import { validationResult } from 'express-validator';
 import { RequestWithAdmin } from '../../helpers/interfaces';
-
-
-interface CreateBookRequest {
-    bookNumber: string;
-    bookName: string;
-    summary: string;
-    author: string;
-    genre: string;
-    image: string;
-    bgColor: string;
-    totalBooks: number;
-    isOnline?: boolean;
-    onlineFileUrl?: string;
-    almirahNumber: number
-    shelfNumber: number
-}
+import { prisma } from '../../helpers/prismaDb';
 
 
 export const createBookController = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const admin = (req as RequestWithAdmin).admin;
-        if (!admin) {
-            res.status(401).json({ message: 'Unauthorized access' });
-            return;
-        }
+    const admin = (req as RequestWithAdmin).admin;
 
+    if (!admin) {
+        res.status(401).json({ message: 'Unauthorized access' });
+        return;
+    }
 
-        // validate form data
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            res.json({ errors: errors.array() });
-            return;
-        }
+    const {
+        bookNumber,
+        bookName,
+        summary,
+        author,
+        genre,
+        image,
+        bgColor,
+        totalBooks,
+        isOnline = false,
+        onlineFileUrl,
+        almirahNumber,
+        shelfNumber
+    } = req.body;
 
-
-        const {
+    // check whether book with the same book number already exists
+    const doesBookAlreadyExist = await prisma.book.findFirst({
+        where: {
             bookNumber,
-            bookName,
-            summary,
-            author,
-            genre,
-            image,
-            bgColor,
-            totalBooks,
-            isOnline = false,
-            onlineFileUrl,
-            almirahNumber,
-            shelfNumber
-        } = req.body as CreateBookRequest;
-
-
-        // Validate online book requirements
-        if (typeof isOnline != 'boolean') {
-            res.status(400).json({
-                message: 'Does this book is online available.'
-            });
-            return;
+            collegeId: admin?.collegeId,
+        },
+        select: {
+            id: true,
         }
+    })
+    if (doesBookAlreadyExist) {
+        res.status(409).json({ message: "A book with the same number already exists" });
+        return;
+    }
 
-        if (isOnline && !onlineFileUrl) {
-            res.status(400).json({
-                message: 'Online File Url is required for online books'
-            });
-            return;
-        }
-
-
-        // Create the book
+    try {
         const book = await prisma.book.create({
             data: {
-                bookName,
                 bookNumber,
+                bookName,
                 summary,
                 author,
                 genre,
@@ -86,27 +60,19 @@ export const createBookController = async (req: Request, res: Response): Promise
                 onlineFileUrl,
                 collegeId: admin.collegeId,
                 copies: {
-                    create: Array(totalBooks).fill({}).map(() => ({
+                    create: Array.from({ length: Number(totalBooks) }, () => ({
                         isBorrowed: false
                     }))
                 }
             },
-            include: {
-                copies: true
-            }
+            include: { copies: true }
         });
 
-        res.status(201).json({
-            message: 'Book created successfully',
-            book
-        });
-        return;
+        res.status(201).json({ message: 'Book created successfully', book });
 
-    } catch (error) {
-        console.error('Create book error:', error);
-        res.status(500).json({
-            message: 'Internal server error'
-        });
-        return;
+    } catch (error: any) {
+        console.error('Create book error:', error?.message || error);
+        res.status(500).json({ message: 'Internal server error' });
     }
+    return;
 };

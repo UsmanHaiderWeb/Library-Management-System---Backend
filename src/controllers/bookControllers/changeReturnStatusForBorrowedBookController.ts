@@ -1,21 +1,19 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from "express";
 import { RequestWithAdmin } from "../../helpers/interfaces";
 import { prisma } from "../../helpers/prismaDb";
 import { redisClient } from "../../helpers/redisClient";
+import { FineService } from "../../services/fine.service";
 
 export const changeReturnStatusForBorrowedBookController = async (req: Request, res: Response): Promise<void> => {
     try {
         const admin = (req as RequestWithAdmin).admin;
 
-        const { borrowedBookId } = (req as any).params;
-        if (!borrowedBookId) {
-            res.status(400).json({ message: "Please provide select a valid book." })
-        }
+        const { borrowedBookId } = req.params;
+        const { status } = req.body;
 
-        const { status } = (req as any).body;
-        if (!status || status != 'returned') {
-            res.status(400).json({ message: "Please provide status." })
+        if (!borrowedBookId || status !== 'returned') {
+            res.status(400).json({ message: "Invalid request. Provide valid book ID and 'returned' status." });
+            return;
         }
 
         const borrowedBook = await prisma.borrowedBook.findUnique({
@@ -28,55 +26,48 @@ export const changeReturnStatusForBorrowedBookController = async (req: Request, 
                 id: true,
                 userId: true,
                 bookCopyId: true,
+                dueDate: true,
             }
-        })
+        });
+
         if (!borrowedBook) {
-            res.status(400).json({ message: "Borrowed Book not found or already returned." })
+            res.status(400).json({ message: "Borrowed Book not found or already returned." });
             return;
         }
 
         const returnedOn = new Date();
+        const fineAmount = FineService.calculateFine(borrowedBook.dueDate, returnedOn);
 
         await prisma.$transaction(async (tx) => {
             await tx.borrowedBook.update({
-                where: {
-                    id: borrowedBook.id,
-                    userId: borrowedBook.userId,
-                    collegeId: admin.collegeId,
-                    bookCopyId: borrowedBook?.bookCopyId
-                },
+                where: { id: borrowedBook.id },
                 data: {
                     status: "returned",
                     returnedOn,
                 }
-            })
-
+            });
 
             await tx.bookCopy.update({
-                where: {
-                    id: borrowedBook?.bookCopyId,
-                    isBorrowed: true,
-                },
-                data: {
-                    isBorrowed: false
-                }
-            })
+                where: { id: borrowedBook.bookCopyId },
+                data: { isBorrowed: false }
+            });
 
-            // delete the user's borrowed books count from Redis first
+            if (fineAmount > 0) {
+                await FineService.applyFine(borrowedBook.userId, fineAmount, tx);
+            }
+
             const redisKey = `user:${borrowedBook.userId}:borrowedBooks`;
             await redisClient.del(redisKey);
+        });
 
-        })
-
-
-        res.status(201).json({
+        res.status(200).json({
             message: "Borrowed book has been returned.",
-            status,
+            fineApplied: fineAmount,
             returnedOn,
         });
+
     } catch (error) {
-        console.log("return borrowed book controller error:", error);
-        res.status(500).json({ message: "Internal Server Error." })
+        console.error("return borrowed book controller error:", error);
+        res.status(500).json({ message: "Internal Server Error." });
     }
-    return;
-}
+};

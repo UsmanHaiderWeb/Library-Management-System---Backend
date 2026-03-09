@@ -3,6 +3,9 @@ import express from 'express';
 import { adminAuthMiddleware } from '../middlewares/adminAuthMiddleware';
 import { validateCreateBookBodyDataMiddleware } from '../middlewares/ValidateFormFields';
 import { createBookController } from '../controllers/bookControllers/createBookController';
+import { deleteBookController } from '../controllers/bookControllers/deleteBookController';
+import { updateBookController } from '../controllers/bookControllers/updateBookController';
+
 import { prisma } from '../helpers/prismaDb';
 import { studentAuthMiddleware } from '../middlewares/studentAuthMiddleware';
 import { borrowBookController } from '../controllers/bookControllers/borrowBookController';
@@ -16,18 +19,21 @@ export const bookRouter = express.Router();
 bookRouter.get('/getBookDetails/:bookId', getBookDetailsController);
 
 // create book
-bookRouter.post('/create', validateCreateBookBodyDataMiddleware, adminAuthMiddleware, createBookController);
+bookRouter.post('/create',
+    adminAuthMiddleware,
+    validateCreateBookBodyDataMiddleware,
+    createBookController
+);
 
 // borrow book
 bookRouter.post('/borrow/:bookId', studentAuthMiddleware, borrowBookController);
 
 // delete book
-bookRouter.post('/delete', async (_, res) => {
-    const book = await prisma.book.delete({
-        where: {
-            id: '642de1e0-336a-499c-99e2-a660acf681f4'
-        }
-    })
-    res.status(201).json({deletedBook: book})
-    return;
-})
+bookRouter.delete('/delete/:bookId', adminAuthMiddleware, deleteBookController);
+
+// update book
+bookRouter.post('/update/:bookId',
+    adminAuthMiddleware,
+    validateCreateBookBodyDataMiddleware,
+    updateBookController
+);

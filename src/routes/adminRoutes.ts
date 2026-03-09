@@ -12,6 +12,9 @@ import { allBorrowBooksController } from '../controllers/bookControllers/allBorr
 import { changeStatusForBorrowBookRequestController } from '../controllers/bookControllers/changeStatusForBorrowBookRequestController';
 import { changeReturnStatusForBorrowedBookController } from '../controllers/bookControllers/changeReturnStatusForBorrowedBookController';
 import { borrowedBooksHistoryController } from '../controllers/bookControllers/borrowedBooksHistoryController';
+import { getImageKitAuthenticationTokens } from '../controllers/getImageKitAuthenticationTokens';
+
+import { getDashboardStatsController } from '../controllers/adminControllers/getDashboardStatsController';
 
 export const adminRouter = express.Router();
 
@@ -21,6 +24,7 @@ adminRouter.post('/login', validateLoginFieldsMiddleware, adminLoginController);
 
 // admin routes
 adminRouter.get('/getAdminDetails', adminAuthMiddleware, getAdminDetailsController);
+adminRouter.get('/dashboard-stats', adminAuthMiddleware, getDashboardStatsController);
 
 // user - student related routes
 adminRouter.get('/getAllUsers', adminAuthMiddleware, getAllUsersController);
@@ -32,3 +36,7 @@ adminRouter.get('/borrowed-books/all', adminAuthMiddleware, allBorrowBooksContro
 adminRouter.get('/borrowed-books/history', adminAuthMiddleware, borrowedBooksHistoryController);
 adminRouter.post('/borrow-requests/change-status/:borrowRequestId', adminAuthMiddleware, changeStatusForBorrowBookRequestController);
 adminRouter.post('/borrowed-books/:borrowedBookId/change-status', adminAuthMiddleware, changeReturnStatusForBorrowedBookController);
+
+
+// imageKit authentication route
+adminRouter.get('/imagekit-authentication-tokens', adminAuthMiddleware, getImageKitAuthenticationTokens);

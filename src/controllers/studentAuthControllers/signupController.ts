@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
 import { prisma } from '../../helpers/prismaDb';
 import { redisClient } from '../../helpers/redisClient';
+import { EmailService } from '../../services/email.service';
 
 interface signupBody {
     email: string,
@@ -105,12 +106,15 @@ export const signupController = async (req: Request, res: Response): Promise<voi
             await redisClient.expire(`user:${user.id}:code`, 60 * 60 * 2);
 
 
+            // send the verification email
+            await EmailService.sendVerificationCode(email, code.toString());
+
             // send the response back to frontend
             res.status(201).json({
-                message: 'User created successfully',
+                message: 'User created successfully. Verification email sent.',
                 temporaryToken: token,
             });
-        })
+        });
 
         return;
     } catch (error) {
