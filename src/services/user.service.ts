@@ -1,4 +1,4 @@
-import { prisma } from '../helpers/prismaDb';
+import { UserRole } from '@prisma/client';
 
 export class UserService {
     /**
@@ -11,6 +11,7 @@ export class UserService {
         isEmailVerified?: boolean;
         isVerifiedByAdmin?: boolean;
         hasActiveBorrows?: boolean;
+        role?: UserRole;
         pageSize?: number;
     }) {
         const {
@@ -20,6 +21,7 @@ export class UserService {
             isEmailVerified,
             isVerifiedByAdmin,
             hasActiveBorrows,
+            role,
             pageSize = 20,
         } = params;
 
@@ -45,6 +47,10 @@ export class UserService {
 
         if (isVerifiedByAdmin !== undefined) {
             andConditions.push({ isVerifiedByAdmin });
+        }
+
+        if (role) {
+            andConditions.push({ role });
         }
 
         if (hasActiveBorrows) {
@@ -77,6 +83,7 @@ export class UserService {
                 phoneNumber: true,
                 isEmailVerified: true,
                 isVerifiedByAdmin: true,
+                role: true,
                 createdAt: true,
                 _count: {
                     select: {
@@ -99,6 +106,22 @@ export class UserService {
     }
 
     /**
+     * Update a user's role
+     */
+    static async updateUserRole(userId: string, role: UserRole, collegeId: string) {
+        const user = await prisma.user.findUnique({
+            where: { id: userId, collegeId }
+        });
+
+        if (!user) throw new Error('User not found');
+
+        return await prisma.user.update({
+            where: { id: userId },
+            data: { role }
+        });
+    }
+
+    /**
      * Get exhaustive user details including history
      */
     static async getUserDetails(userId: string) {
@@ -113,8 +136,10 @@ export class UserService {
                 isEmailVerified: true,
                 isVerifiedByAdmin: true,
                 collegeId: true,
+                role: true,
             }
         });
+// ... (rest of method)
 
         if (!user) return null;
 

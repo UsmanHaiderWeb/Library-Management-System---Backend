@@ -14,15 +14,16 @@ datasource db {
 }
 
 model College {
-  id             String             @id @default(uuid())
-  name           String             @db.VarChar(100)
-  code           String             @unique @db.VarChar(10) // e.g., GCUF, UCP
-  admins         Admin[]
-  users          User[]
-  books          Book[]
-  borrowRequests BorrowedRequests[]
-  borrowBooks    BorrowedBook[]
-  createdAt      DateTime           @default(now())
+  id               String             @id @default(uuid())
+  name             String             @db.VarChar(100)
+  code             String             @unique @db.VarChar(10) // e.g., GCUF, UCP
+  admins           Admin[]
+  users            User[]
+  books            Book[]
+  borrowRequests   BorrowedRequests[]
+  borrowBooks      BorrowedBook[]
+  purchaseRequests PurchaseRequest[]
+  createdAt        DateTime           @default(now())
 }
 
 model Book {
@@ -69,17 +70,25 @@ model User {
   phoneNumber        String?             @db.VarChar(13)
   isVerifiedByAdmin  Boolean             @default(false)
   fineBalance        Int                 @default(0)
+  role               UserRole            @default(STUDENT)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   batchYear          Int?
   borrowedBooks      BorrowedBook[] // one-to-many relation
   borrowedRequests   BorrowedRequests[]
   verificationTokens VerificationToken[]
+  purchaseRequests   PurchaseRequest[]
   ipAddressess       ipAddressess[]
   College            College?            @relation(fields: [collegeId], references: [id])
   collegeId          String?
 
-  @@index([batchYear, isVerifiedByAdmin, id, email, collegeId])
+  @@index([batchYear, isVerifiedByAdmin, id, email, collegeId, role])
+}
+
+enum UserRole {
+  STUDENT
+  FACULTY
+  STAFF
 }
 
 model Admin {
@@ -135,6 +144,28 @@ enum BorrowRequestStatus {
   pending
   accepted
   rejected
+}
+
+model PurchaseRequest {
+  id          String                @id @default(uuid())
+  bookTitle   String                @db.VarChar(200)
+  author      String?               @db.VarChar(100)
+  reason      String?               @db.Text
+  status      PurchaseRequestStatus @default(PENDING)
+  requestedBy User                  @relation(fields: [userId], references: [id])
+  userId      String
+  College     College?              @relation(fields: [collegeId], references: [id])
+  collegeId   String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@index([userId, collegeId, status])
+}
+
+enum PurchaseRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model VerificationToken {

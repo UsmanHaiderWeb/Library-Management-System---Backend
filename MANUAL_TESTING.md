@@ -31,18 +31,33 @@ Since the automated testing environment (Docker/DB) is currently unavailable, pl
 
 ## 3. Fines & Sanctions
 ### Book Return with Fine
-- **Endpoint**: `POST /api/admin/return-book/:borrowedBookId`
+- **Endpoint**: `POST /api/admin/borrowed-books/:borrowedBookId/change-status`
 - **Body**: `{ "status": "returned" }`
-- **Expected**: `fineApplied` amount in response if the book is overdue (DueDate < Now).
-- **Verification**: Check the user's `fineBalance` in the database to see if it incremented correctly.
+- **Verification**: Check user `fineBalance` in DB if return is past `dueDate`.
 
-## 4. Email Notifications
-### Signup Verification
-- **Endpoint**: `POST /api/student/signup`
-- **Expected**: Success response + Console log "Email service: Verification email sent to..."
-- **Verification**: Verify that an OTP is generated and linked to the user.
+## 4. User Roles & Borrow Limits
+### Role Update
+- **Endpoint**: `PATCH /api/admin/update-user-role/:userId`
+- **Body**: `{ "role": "FACULTY" }`
+- **Test**: Attempt to borrow 4 books (should be allowed for Faculty, denied for Student).
 
-## 5. Deployment Checklist
-- [ ] Run `npx prisma db push` once the database is reachable.
-- [ ] Update `.env` with valid `EMAIL_USER` and `EMAIL_PASS`.
-- [ ] Verify Redis is running for caching dashboard stats.
+## 5. Book Purchase Requests
+### Submit Request
+- **Endpoint**: `POST /api/students/purchase-request`
+- **Body**: `{ "bookTitle": "Clean Code", "author": "Robert C. Martin", "reason": "Academic" }`
+- **Verification**: Admin can view this in `GET /api/admin/purchase-requests`.
+
+## 6. Admin Bulk Import (CSV)
+### Import Books
+- **Endpoint**: `POST /api/admin/import/books`
+- **Body**: `FormData` (file: `books.csv`)
+- **Expected**: Count of created books in JSON response.
+
+## 7. Digital Library Access
+### Secure Access
+- **Endpoint**: `GET /api/books/digital/:bookId`
+- **Auth**: Student JWT.
+- **Expected**: `403 Forbidden` for unverified users, `200 OK` with `fileUrl` for verified users.
+
+## 8. Deployment Checklist
+... (rest)

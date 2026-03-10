@@ -40,105 +40,88 @@ IMAGE_KIT_URL="your-url-endpoint"
 - **Body:** `{ email, password, collegeCode }`
 - **Logic:** Authenticates student and returns a JWT.
 
-#### Verify Email
-- **Endpoint:** `POST /api/students/verify-email`
-- **Header:** `Authorization: Bearer <token>`
-- **Body:** `{ verificationCode }` (6-digit numeric)
-- **Logic:** Marks student email as verified.
+#### Forgot Password
+- **Endpoint:** `POST /api/students/forgot-password`
+- **Body:** `{ email }`
+- **Logic:** Sends a 6-digit OTP to the student's email.
+
+#### Reset Password
+- **Endpoint:** `POST /api/students/reset-password`
+- **Body:** `{ email, otp, newPassword }`
+- **Logic:** Verifies OTP and updates the password.
 
 ### Admin Authentication
+... (Signup/Login same as before)
 
-#### Signup
-- **Endpoint:** `POST /api/admin/signup`
-- **Body:** `{ name, email, password, collegeCode }`
-- **Logic:** Creates an admin for a specific college.
+---
 
-#### Login
-- **Endpoint:** `POST /api/admin/login`
-- **Body:** `{ email, password }`
-- **Logic:** Authenticates admin and returns a JWT.
+## 👥 User Roles & Permissions
+
+The system supports three user roles with different borrowing privileges:
+- **STUDENT**: Max 3 active borrows, 14-day duration.
+- **FACULTY**: Max 10 active borrows, 30-day duration.
+- **STAFF**: Max 5 active borrows, 21-day duration.
+
+Admins can update user roles via:
+- **Endpoint:** `PATCH /api/admin/update-user-role/:userId`
+- **Body:** `{ role: "STUDENT" | "FACULTY" | "STAFF" }`
 
 ---
 
 ## 📚 Book Management (Admin Only)
 
-#### Create Book
-- **Endpoint:** `POST /api/books/create`
-- **Header:** `Authorization: Bearer <Admin_Token>`
-- **Body:** `{ bookNumber, bookName, summary, author, genre, image, bgColor, totalBooks, almirahNumber, shelfNumber, isOnline?, onlineFileUrl? }`
-- **Logic:** Creates a book record and automatically generates `totalBooks` copies in the database.
+#### Bulk Import Books
+- **Endpoint:** `POST /api/admin/import/books`
+- **Body:** `FormData` with CSV file.
+- **CSV Headers:** `bookNumber, bookName, summary, author, genre, totalBooks, almirahNumber, shelfNumber, isOnline, onlineFileUrl`
 
-#### Update Book
-- **Endpoint:** `POST /api/books/update/:bookId`
-- **Header:** `Authorization: Bearer <Admin_Token>`
-- **Body:** (Same as Create)
-- **Logic:** Updates metadata. If `totalBooks` increases, it adds new copies. If it decreases, it attempts to remove unborrowed copies.
-
-#### Delete Book
-- **Endpoint:** `DELETE /api/books/delete/:bookId`
-- **Header:** `Authorization: Bearer <Admin_Token>`
-- **Logic:** Deletes the book and all associated copies/requests (Cascade).
+#### Bulk Import Users
+- **Endpoint:** `POST /api/admin/import/users`
+- **Body:** `FormData` with CSV file.
+- **CSV Headers:** `name, studentId, email, phoneNumber, batchYear, role`
 
 ---
 
-## 🔄 Borrowing System
+## 🔄 Borrowing & Fines
 
 #### Borrow Request (Student)
 - **Endpoint:** `POST /api/books/borrow/:bookId`
-- **Header:** `Authorization: Bearer <Student_Token>`
-- **Logic:** Creates a "pending" borrow request. Limit: 2 active borrows per student (enforced via Redis/DB).
+- **Logic:** Enforces role-based limits. Students cannot borrow more than their allowed quota.
 
-#### List All Requests (Admin)
-- **Endpoint:** `GET /api/admin/all-borrow-requests`
-- **Header:** `Authorization: Bearer <Admin_Token>`
-- **Query Params:** `pageNumber`, `searchQuery`
-- **Logic:** View all pending/accepted/rejected requests for the admin's college.
-
-#### Accept/Reject Request (Admin)
-- **Endpoint:** `POST /api/admin/borrow-requests/change-status/:borrowRequestId`
-- **Header:** `Authorization: Bearer <Admin_Token>`
-- **Body:** `{ status: "accepted" | "rejected" }`
-- **Logic:** 
-  - If **Accepted**: Assigns an available `BookCopy`, creates a `BorrowedBook` record, and sets a 14-day due date.
-  - If **Rejected**: Updates request status.
-
-#### Return Book (Admin)
-- **Endpoint:** `POST /api/admin/borrowed-books/:borrowedBookId/change-status`
-- **Header:** `Authorization: Bearer <Admin_Token>`
-- **Body:** `{ status: "returned" }`
-- **Logic:** Marks book as returned, releases the `BookCopy`, and clears the user's borrow count from Redis.
-
-#### View History (Admin)
-- **Endpoint:** `GET /api/admin/borrowed-books/history`
-- **Header:** `Authorization: Bearer <Admin_Token>`
-- **Query Params:** `pageNumber`, `searchQuery`
-- **Logic:** List all returned books.
+#### Fines & Sanctions
+- **Rate:** 10 units per day overdue.
+- **Logic:** Fines are automatically calculated and added to the user's `fineBalance` during the return process if the book is overdue.
 
 ---
 
-## 👤 User & Profile
+## 💡 Purchase Requests
 
-#### Get Student Details
-- **Endpoint:** `GET /api/students/getUserDetails`
-- **Header:** `Authorization: Bearer <Student_Token>`
-- **Logic:** Returns student info and their full borrowing history.
+#### Submit Request (Student)
+- **Endpoint:** `POST /api/students/purchase-request`
+- **Body:** `{ bookTitle, author, reason }`
 
-#### Get Admin Details
-- **Endpoint:** `GET /api/admin/getAdminDetails`
-- **Header:** `Authorization: Bearer <Admin_Token>`
-- **Logic:** Returns authenticated admin info.
-
-#### List All Students (Admin)
-- **Endpoint:** `GET /api/admin/getAllUsers`
-- **Header:** `Authorization: Bearer <Admin_Token>`
-- **Query Params:** `pageNumber`, `searchQuery`
-- **Logic:** Paginated list of students in the admin's college.
+#### Manage Requests (Admin)
+- **Endpoint:** `GET /api/admin/purchase-requests`
+- **Endpoint:** `POST /api/admin/purchase-requests/:requestId/status`
+- **Body:** `{ status: "APPROVED" | "REJECTED" }`
 
 ---
 
-## 🛠️ Infrastructure & Security
+## 🌐 Digital Library
 
-- **Redis Caching:** Used to store and verify `college` and `admin` session data to reduce DB load in middlewares. Also caches student borrow counts.
-- **ImageKit:** Admin can get auth tokens for client-side uploads via `GET /api/admin/imagekit-authentication-tokens`.
-- **Validation:** Robust input validation using `express-validator`.
-- **RBAC:** Middleware ensures students cannot access admin routes and vice-versa.
+#### Secure Access
+- **Endpoint:** `GET /api/books/digital/:bookId`
+- **Logic:** Only verified students/faculty can access. Returns the secure file URL for online books.
+
+---
+
+## 👤 Dashboard & Analytics (Admin)
+
+#### Dashboard Stats
+- **Endpoint:** `GET /api/admin/dashboard-stats`
+- **Returns:** Total books, members, active borrows, and college-specific metrics.
+
+---
+
+## 🛠️ Infrastructure
+... (Redis, ImageKit, etc.)

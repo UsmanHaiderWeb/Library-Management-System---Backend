@@ -16,9 +16,16 @@ import { getImageKitAuthenticationTokens } from '../controllers/getImageKitAuthe
 
 import { getDashboardStatsController } from '../controllers/adminControllers/getDashboardStatsController';
 
+import { getAllPurchaseRequestsController, updatePurchaseRequestStatusController } from '../controllers/userControllers/purchaseRequestController';
+
+import { updateUserRoleController } from '../controllers/adminControllers/updateUserRoleController';
+
+import { bulkImportBooksController, bulkImportUsersController } from '../controllers/adminControllers/bulkImportController';
+import { upload } from '../helpers/multer';
+
 export const adminRouter = express.Router();
 
-// admin auth routes
+// Auth routes
 adminRouter.post('/signup', validateAdminSignupFieldsMiddleware, adminSignupController);
 adminRouter.post('/login', validateLoginFieldsMiddleware, adminLoginController);
 
@@ -26,8 +33,17 @@ adminRouter.post('/login', validateLoginFieldsMiddleware, adminLoginController);
 adminRouter.get('/getAdminDetails', adminAuthMiddleware, getAdminDetailsController);
 adminRouter.get('/dashboard-stats', adminAuthMiddleware, getDashboardStatsController);
 
+// Import routes
+adminRouter.post('/import/books', adminAuthMiddleware, upload.single('file'), bulkImportBooksController);
+adminRouter.post('/import/users', adminAuthMiddleware, upload.single('file'), bulkImportUsersController);
+
 // user - student related routes
 adminRouter.get('/getAllUsers', adminAuthMiddleware, getAllUsersController);
+adminRouter.patch('/update-user-role/:userId', adminAuthMiddleware, updateUserRoleController);
+
+// Purchase Requests
+adminRouter.get('/purchase-requests', adminAuthMiddleware, getAllPurchaseRequestsController);
+adminRouter.post('/purchase-requests/:requestId/status', adminAuthMiddleware, updatePurchaseRequestStatusController);
 
 // books related routes
 adminRouter.get('/getAllBooks', adminAuthMiddleware, getAllBooksController);

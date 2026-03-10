@@ -8,15 +8,15 @@ import { updateBookController } from '../controllers/bookControllers/updateBookC
 
 import { prisma } from '../helpers/prismaDb';
 import { studentAuthMiddleware } from '../middlewares/studentAuthMiddleware';
-import { borrowBookController } from '../controllers/bookControllers/borrowBookController';
-import { getBookDetailsController } from '../controllers/bookControllers/getBookDetailsController';
+import { getDigitalFileController } from '../controllers/bookControllers/getDigitalFileController';
 
 export const bookRouter = express.Router();
 
-
-
 // public routes
 bookRouter.get('/getBookDetails/:bookId', getBookDetailsController);
+
+// Digital Access (Secure)
+bookRouter.get('/digital/:bookId', studentAuthMiddleware, getDigitalFileController);
 
 // create book
 bookRouter.post('/create',

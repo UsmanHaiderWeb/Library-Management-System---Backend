@@ -7,6 +7,8 @@ import { getUserDetailsController } from '../controllers/studentControllers/getU
 import { studentAuthMiddleware } from '../middlewares/studentAuthMiddleware';
 import { requestPasswordResetController, resetPasswordController } from '../controllers/authControllers/passwordResetController';
 
+import { createPurchaseRequestController } from '../controllers/userControllers/purchaseRequestController';
+
 export const studentRouter = express.Router();
 
 // Auth routes
@@ -17,6 +19,9 @@ studentRouter.post('/verify-email', validateVerificationCode, studentEmailVerifi
 // Password Reset
 studentRouter.post('/forgot-password', requestPasswordResetController);
 studentRouter.post('/reset-password', resetPasswordController);
+
+// Purchase Requests
+studentRouter.post('/purchase-request', studentAuthMiddleware, createPurchaseRequestController);
 
 // detail routes
 studentRouter.get('/getUserDetails', studentAuthMiddleware, getUserDetailsController);
