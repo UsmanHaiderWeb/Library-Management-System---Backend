@@ -18,10 +18,10 @@ describe('BookService', () => {
       (prisma.book.findMany as jest.Mock).mockResolvedValue(mockBooks);
       (prisma.book.count as jest.Mock).mockResolvedValue(2);
 
-      const result = await BookService.getAllBooks({ page: 1, limit: 10 });
+      const result = await BookService.getAllBooks({ collegeId: 'college-123', pageNumber: 1 });
 
       expect(result.books).toHaveLength(2);
-      expect(result.total).toBe(2);
+      expect(result.totalCount).toBe(2);
       expect(prisma.book.findMany).toHaveBeenCalled();
     });
   });
@@ -31,7 +31,7 @@ describe('BookService', () => {
       const mockBook = { id: '1', bookName: 'Book 1', copies: [] };
       (prisma.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
 
-      const result = await BookService.getBookDetails('1');
+      const result = await BookService.getBookDetails('college-123', '1');
 
       expect(result).toEqual(mockBook);
     });
@@ -39,7 +39,7 @@ describe('BookService', () => {
     it('should throw error if book not found', async () => {
       (prisma.book.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await expect(BookService.getBookDetails('invalid')).rejects.toThrow('Book not found');
+      await expect(BookService.getBookDetails('college-123', 'invalid')).rejects.toThrow('Book not found');
     });
   });
 });

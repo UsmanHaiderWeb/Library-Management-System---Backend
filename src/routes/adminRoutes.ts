@@ -34,16 +34,16 @@ adminRouter.get('/getAdminDetails', adminAuthMiddleware, getAdminDetailsControll
 adminRouter.get('/dashboard-stats', adminAuthMiddleware, getDashboardStatsController);
 
 // Import routes
-adminRouter.post('/import/books', adminAuthMiddleware, upload.single('file'), bulkImportBooksController);
-adminRouter.post('/import/users', adminAuthMiddleware, upload.single('file'), bulkImportUsersController);
+adminRouter.post('/import/books', adminAuthMiddleware, upload.single('file'), bulkImportBooksController as any);
+adminRouter.post('/import/users', adminAuthMiddleware, upload.single('file'), bulkImportUsersController as any);
 
 // user - student related routes
 adminRouter.get('/getAllUsers', adminAuthMiddleware, getAllUsersController);
-adminRouter.patch('/update-user-role/:userId', adminAuthMiddleware, updateUserRoleController);
+adminRouter.patch('/update-user-role/:userId', adminAuthMiddleware, updateUserRoleController as any);
 
 // Purchase Requests
 adminRouter.get('/purchase-requests', adminAuthMiddleware, getAllPurchaseRequestsController);
-adminRouter.post('/purchase-requests/:requestId/status', adminAuthMiddleware, updatePurchaseRequestStatusController);
+adminRouter.post('/purchase-requests/:requestId/status', adminAuthMiddleware, updatePurchaseRequestStatusController as any);
 
 // books related routes
 adminRouter.get('/getAllBooks', adminAuthMiddleware, getAllBooksController);

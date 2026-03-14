@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { UserRole } from '@prisma/client';
+import { prisma } from '../helpers/prismaDb';
 
 export class UserService {
     /**
@@ -139,7 +141,7 @@ export class UserService {
                 role: true,
             }
         });
-// ... (rest of method)
+        // ... (rest of method)
 
         if (!user) return null;
 

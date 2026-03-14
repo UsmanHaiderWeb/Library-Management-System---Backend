@@ -21,7 +21,7 @@ studentRouter.post('/forgot-password', requestPasswordResetController);
 studentRouter.post('/reset-password', resetPasswordController);
 
 // Purchase Requests
-studentRouter.post('/purchase-request', studentAuthMiddleware, createPurchaseRequestController);
+studentRouter.post('/purchase-request', studentAuthMiddleware, createPurchaseRequestController as any);
 
 // detail routes
 studentRouter.get('/getUserDetails', studentAuthMiddleware, getUserDetailsController);

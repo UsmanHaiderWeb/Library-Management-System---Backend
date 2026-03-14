@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { app } from '../../app';
+import app from '../../app';
 import { prisma } from '../../src/helpers/prismaDb';
 import bcrypt from 'bcryptjs';
 
@@ -9,7 +9,7 @@ jest.mock('../src/helpers/prismaDb', () => ({
       findUnique: jest.fn(),
     },
     college: {
-        findFirst: jest.fn(),
+      findFirst: jest.fn(),
     }
   },
 }));
