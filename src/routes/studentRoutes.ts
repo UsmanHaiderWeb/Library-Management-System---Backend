@@ -9,6 +9,7 @@ import { updateProfileController } from '../controllers/studentControllers/updat
 import { changePasswordController } from '../controllers/studentAuthControllers/changePasswordController';
 import { toggleSavedBookController, getWishlistController } from '../controllers/studentControllers/wishlistController';
 import { addReviewController, getBookReviewsController } from '../controllers/studentControllers/reviewController';
+import { getNotificationsController, markNotificationAsReadController, markAllNotificationsAsReadController } from '../controllers/studentControllers/notificationController';
 import { studentAuthMiddleware } from '../middlewares/studentAuthMiddleware';
 import { requestPasswordResetController, resetPasswordController } from '../controllers/authControllers/passwordResetController';
 
@@ -40,3 +41,8 @@ studentRouter.get('/wishlist', studentAuthMiddleware, getWishlistController);
 // Reviews
 studentRouter.post('/reviews', studentAuthMiddleware, addReviewController);
 studentRouter.get('/books/:bookId/reviews', getBookReviewsController);
+
+// Notifications
+studentRouter.get('/notifications', studentAuthMiddleware, getNotificationsController);
+studentRouter.put('/notifications/read-all', studentAuthMiddleware, markAllNotificationsAsReadController);
+studentRouter.put('/notifications/read/:id', studentAuthMiddleware, markNotificationAsReadController);

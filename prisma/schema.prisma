@@ -83,6 +83,7 @@ model User {
   ipAddressess       ipAddressess[]
   savedBooks         SavedBook[]
   reviews            Review[]
+  notifications      Notification[]
   College            College?            @relation(fields: [collegeId], references: [id])
   collegeId          String?
   passwordResetRetries Int               @default(0)
@@ -229,3 +230,16 @@ model Review {
 
   @@index([userId, bookId, rating])
 }
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String   @db.VarChar(200)
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
