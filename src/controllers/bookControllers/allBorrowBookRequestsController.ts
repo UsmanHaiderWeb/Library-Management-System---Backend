@@ -2,16 +2,22 @@
 import { Request, response, Response } from "express";
 import { RequestWithAdmin } from "../../helpers/interfaces";
 import { prisma } from "../../helpers/prismaDb";
+import { getDateRangeQuery } from "../../helpers/dateUtils";
 
 export const allBorrowBookRequestsController = async (req: Request, res: Response) => {
     try {
         const admin = (req as RequestWithAdmin).admin;
-        const { pageNumber, searchQuery } = (req as any).query as { pageNumber: number, searchQuery: string };
+        const { pageNumber, searchQuery, fromDate, toDate } = (req as any).query as { pageNumber: number, searchQuery: string, fromDate?: string, toDate?: string };
 
         // find whereClause to pass to prisma
         const whereClause: any = {
             collegeId: admin.collegeId,
         };
+
+        const dateCondition = getDateRangeQuery(fromDate, toDate);
+        if (dateCondition) {
+            whereClause.requestedOn = dateCondition;
+        }
 
         if (searchQuery?.trim() !== '') {
             whereClause.OR = [

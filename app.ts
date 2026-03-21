@@ -17,6 +17,13 @@ const app = express();
 
 
 // Middleware
+app.use((req, res, next) => {
+    const fs = require('fs');
+    try {
+        fs.appendFileSync('d:/Node/LibraryManagementSystem/Backend/global_logs.txt', `${new Date().toISOString()} - ${req.method} ${req.url}\n`);
+    } catch (e) {}
+    next();
+});
 app.use(cors({
     origin: ['http://localhost:3000', 'http://localhost:5173'],
     credentials: true

@@ -1,4 +1,6 @@
 import { prisma } from '../helpers/prismaDb';
+import { getDateRangeQuery } from '../helpers/dateUtils';
+import fs from 'fs';
 
 export class BookService {
     /**
@@ -12,6 +14,8 @@ export class BookService {
         isOnline?: boolean;
         availableOnly?: boolean;
         pageSize?: number;
+        fromDate?: string;
+        toDate?: string;
     }) {
         const {
             collegeId,
@@ -20,47 +24,51 @@ export class BookService {
             genre,
             isOnline,
             availableOnly,
-            pageSize = 20
+            pageSize = 20,
+            fromDate,
+            toDate
         } = params;
 
         const whereClause: any = {
             collegeId,
         };
 
-        const andConditions: any[] = [];
-
         if (searchQuery.trim() !== '') {
-            andConditions.push({
-                OR: [
-                    { bookNumber: { contains: searchQuery } },
-                    { bookName: { contains: searchQuery } },
-                    { genre: { contains: searchQuery } },
-                    { author: { contains: searchQuery } },
-                ],
-            });
+            whereClause.OR = [
+                { bookNumber: { contains: searchQuery } },
+                { bookName: { contains: searchQuery } },
+                { genre: { contains: searchQuery } },
+                { author: { contains: searchQuery } },
+            ];
         }
 
         if (genre) {
-            andConditions.push({ genre: { contains: genre } });
+            whereClause.genre = { contains: genre };
         }
 
         if (isOnline !== undefined) {
-            andConditions.push({ isOnline });
+            whereClause.isOnline = isOnline;
         }
 
         if (availableOnly) {
-            andConditions.push({
-                copies: {
-                    some: {
-                        isBorrowed: false,
-                    },
+            whereClause.copies = {
+                some: {
+                    isBorrowed: false,
                 },
-            });
+            };
         }
 
-        if (andConditions.length > 0) {
-            whereClause.AND = andConditions;
+        const dateCondition = getDateRangeQuery(fromDate, toDate);
+        if (dateCondition) {
+            whereClause.createdAt = dateCondition;
         }
+
+        console.log("FINAL_WHERE_CLAUE:", JSON.stringify(whereClause, null, 2));
+        
+        // Write to a local file we can definitely read
+        try {
+            fs.writeFileSync(__dirname + '/last_query.json', JSON.stringify({ params, whereClause }, null, 2));
+        } catch (e) {}
 
         const booksCount = await prisma.book.count({
             where: whereClause,
