@@ -81,6 +81,8 @@ model User {
   ipAddressess       ipAddressess[]
   College            College?            @relation(fields: [collegeId], references: [id])
   collegeId          String?
+  passwordResetRetries Int               @default(0)
+  passwordResetLastRetry DateTime?
 
   @@index([batchYear, isVerifiedByAdmin, id, email, collegeId, role])
 }
@@ -101,6 +103,8 @@ model Admin {
   collegeId          String
   College            College             @relation(fields: [collegeId], references: [id])
   verificationTokens VerificationToken[]
+  passwordResetRetries Int               @default(0)
+  passwordResetLastRetry DateTime?
 
   @@index([id, email, collegeId])
 }

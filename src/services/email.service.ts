@@ -34,15 +34,17 @@ export class EmailService {
     }
 
     /**
-     * Send OTP for Password Reset
+     * Send Link for Password Reset
      */
-    static async sendPasswordResetOTP(email: string, otp: string) {
+    static async sendPasswordResetLink(email: string, resetLink: string) {
         const html = `
       <h1>Password Reset Request</h1>
-      <p>Your OTP for password reset is: <strong>${otp}</strong></p>
-      <p>This OTP will expire in 15 minutes.</p>
+      <p>Click the link below to reset your password:</p>
+      <a href="${resetLink}" style="display:inline-block;padding:10px 20px;background-color:#007bff;color:#fff;text-decoration:none;border-radius:5px;">Reset Password</a>
+      <p>Or copy this link to your browser: <br/>${resetLink}</p>
+      <p>This link will expire in 15 minutes.</p>
     `;
-        await this.sendEmail(email, 'LMS - Password Reset OTP', html);
+        await this.sendEmail(email, 'LMS - Password Reset Link', html);
     }
 
     /**

@@ -84,7 +84,8 @@ Create a specialized `ConfigService` or use a package to validate environment va
 - [x] Borrowing System (Request -> Approval -> Return)
 - [x] **Service Layer Refactoring**
 - [x] **Advanced Search & Filtering**
-- [x] **OTP Password Reset**
+- [x] **Link-based Password Reset with Rate Limiting**
+- [x] **Student Profile Management (Details & Password Updates)**
 - [x] **Fine Calculation System**
 - [x] **Email Notifications**
 - [x] **Role-based Borrowing Limits**

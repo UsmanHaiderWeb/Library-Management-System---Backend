@@ -18,6 +18,10 @@ export const requestPasswordResetController = async (req: Request, res: Response
             res.status(404).json({ message: error.message });
             return;
         }
+        if (error.message.includes('rate limit') || error.message.includes('maximum number of password reset attempts')) {
+            res.status(429).json({ message: error.message });
+            return;
+        }
         console.error('request reset error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -25,17 +29,20 @@ export const requestPasswordResetController = async (req: Request, res: Response
 
 export const resetPasswordController = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { email, otp, newPassword, type } = req.body;
+        const { email, token, newPassword, type } = req.body;
 
-        if (!email || !otp || !newPassword || !type) {
+        // Backend will accept token but we might have also legacy otp. We'll map otp to token just in case.
+        const resetToken = token || req.body.otp;
+
+        if (!email || !resetToken || !newPassword || !type) {
             res.status(400).json({ message: 'All fields are required' });
             return;
         }
 
-        const result = await AuthService.resetPassword({ email, otp, newPassword, type });
+        const result = await AuthService.resetPassword({ email, token: resetToken, newPassword, type });
         res.status(200).json(result);
     } catch (error: any) {
-        if (error.message === 'Invalid or expired OTP') {
+        if (error.message === 'Invalid or expired reset token') {
             res.status(400).json({ message: error.message });
             return;
         }

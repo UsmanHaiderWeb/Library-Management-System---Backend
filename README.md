@@ -43,12 +43,24 @@ IMAGE_KIT_URL="your-url-endpoint"
 #### Forgot Password
 - **Endpoint:** `POST /api/students/forgot-password`
 - **Body:** `{ email }`
-- **Logic:** Sends a 6-digit OTP to the student's email.
+- **Logic:** Sends a reset link to the student's email. Includes rate limiting (max 3 requests per 24 hours).
 
 #### Reset Password
 - **Endpoint:** `POST /api/students/reset-password`
-- **Body:** `{ email, otp, newPassword }`
-- **Logic:** Verifies OTP and updates the password.
+- **Body:** `{ email, token, newPassword }`
+- **Logic:** Verifies the secure token and updates the password.
+
+### Student Profile Management
+
+#### Update Profile Details
+- **Endpoint:** `PUT /api/students/profile`
+- **Body:** `{ name, phoneNumber }`
+- **Logic:** Updates the logged-in student's optional details.
+
+#### Change Password
+- **Endpoint:** `POST /api/students/change-password`
+- **Body:** `{ currentPassword, newPassword }`
+- **Logic:** Validates current password and updates to new password.
 
 ### Admin Authentication
 ... (Signup/Login same as before)

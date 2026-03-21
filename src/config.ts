@@ -10,6 +10,7 @@ const envSchema = z.object({
     Session_Secret: z.string().min(10),
     REDIS_URL: z.string().url().optional().default('redis://localhost:6379'),
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    FRONTEND_URL: z.string().url().default('http://localhost:5173'),
 
     EMAIL_HOST: z.string().default('smtp.gmail.com'),
     EMAIL_PORT: z.string().default('587'),

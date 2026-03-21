@@ -1,9 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import express from 'express';
 import { signupController as studentSignupController } from '../controllers/studentAuthControllers/signupController';
 import { validateLoginFieldsMiddleware, validateSignupFieldsMiddleware, validateVerificationCodeMiddleware as validateVerificationCode } from '../middlewares/ValidateFormFields';
 import { loginController as studentLoginController } from '../controllers/studentAuthControllers/loginController';
 import { verifyEmailController as studentEmailVerificationController } from '../controllers/studentAuthControllers/verifyEmailController';
 import { getUserDetailsController } from '../controllers/studentControllers/getUserDetailsController';
+import { updateProfileController } from '../controllers/studentControllers/updateProfileController';
+import { changePasswordController } from '../controllers/studentAuthControllers/changePasswordController';
 import { studentAuthMiddleware } from '../middlewares/studentAuthMiddleware';
 import { requestPasswordResetController, resetPasswordController } from '../controllers/authControllers/passwordResetController';
 
@@ -25,3 +28,5 @@ studentRouter.post('/purchase-request', studentAuthMiddleware, createPurchaseReq
 
 // detail routes
 studentRouter.get('/getUserDetails', studentAuthMiddleware, getUserDetailsController);
+studentRouter.put('/profile', studentAuthMiddleware, updateProfileController);
+studentRouter.post('/change-password', studentAuthMiddleware, changePasswordController);
