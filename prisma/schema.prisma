@@ -44,6 +44,8 @@ model Book {
   onlineFileUrl    String?            @db.LongText // optional: PDF / epub / link
   copies           BookCopy[]
   BorrowedRequests BorrowedRequests[]
+  SavedBooks       SavedBook[]
+  Reviews          Review[]
   College          College?           @relation(fields: [collegeId], references: [id])
   collegeId        String?
 
@@ -79,6 +81,8 @@ model User {
   verificationTokens VerificationToken[]
   purchaseRequests   PurchaseRequest[]
   ipAddressess       ipAddressess[]
+  savedBooks         SavedBook[]
+  reviews            Review[]
   College            College?            @relation(fields: [collegeId], references: [id])
   collegeId          String?
   passwordResetRetries Int               @default(0)
@@ -198,4 +202,30 @@ model ipAddressess {
   user       User    @relation(fields: [userId], references: [id])
 
   @@index([userId, id, ipAddress])
+}
+
+model SavedBook {
+  id        String   @id @default(uuid())
+  userId    String
+  bookId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, bookId])
+  @@index([userId, bookId])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int      @default(5) // 1 to 5
+  comment   String?  @db.Text
+  userId    String
+  bookId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, bookId, rating])
 }

@@ -7,6 +7,8 @@ import { verifyEmailController as studentEmailVerificationController } from '../
 import { getUserDetailsController } from '../controllers/studentControllers/getUserDetailsController';
 import { updateProfileController } from '../controllers/studentControllers/updateProfileController';
 import { changePasswordController } from '../controllers/studentAuthControllers/changePasswordController';
+import { toggleSavedBookController, getWishlistController } from '../controllers/studentControllers/wishlistController';
+import { addReviewController, getBookReviewsController } from '../controllers/studentControllers/reviewController';
 import { studentAuthMiddleware } from '../middlewares/studentAuthMiddleware';
 import { requestPasswordResetController, resetPasswordController } from '../controllers/authControllers/passwordResetController';
 
@@ -30,3 +32,11 @@ studentRouter.post('/purchase-request', studentAuthMiddleware, createPurchaseReq
 studentRouter.get('/getUserDetails', studentAuthMiddleware, getUserDetailsController);
 studentRouter.put('/profile', studentAuthMiddleware, updateProfileController);
 studentRouter.post('/change-password', studentAuthMiddleware, changePasswordController);
+
+// Wishlist
+studentRouter.post('/wishlist/toggle', studentAuthMiddleware, toggleSavedBookController);
+studentRouter.get('/wishlist', studentAuthMiddleware, getWishlistController);
+
+// Reviews
+studentRouter.post('/reviews', studentAuthMiddleware, addReviewController);
+studentRouter.get('/books/:bookId/reviews', getBookReviewsController);
