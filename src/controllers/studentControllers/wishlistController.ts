@@ -15,6 +15,11 @@ export const toggleSavedBookController = async (req: Request, res: Response): Pr
             return;
         }
 
+        if (!user.isEmailVerified) {
+            res.status(403).json({ message: 'Verification required. Please verify your email to manage wishlist.' });
+            return;
+        }
+
         const existingSave = await prisma.savedBook.findUnique({
             where: {
                 userId_bookId: {

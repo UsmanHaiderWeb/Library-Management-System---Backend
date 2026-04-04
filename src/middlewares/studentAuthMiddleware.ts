@@ -76,6 +76,7 @@ export const studentAuthMiddleware = async (req: Request, res: Response, next: N
                 phoneNumber: user?.phoneNumber,
                 studentId: user?.studentId,
                 collegeId: college?.id,
+                isEmailVerified: user?.isEmailVerified,
             };
 
             console.log("dataToBeStored: ", dataToBeStored);

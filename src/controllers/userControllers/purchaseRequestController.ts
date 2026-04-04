@@ -15,6 +15,10 @@ export const createPurchaseRequestController = async (req: Request, res: Respons
       return res.status(400).json({ message: 'Book title is required' });
     }
 
+    if (!user.isEmailVerified) {
+      return res.status(403).json({ message: 'Verification required. Please verify your email to request books.' });
+    }
+
     const request = await PurchaseService.createRequest(user.id, user.collegeId as string, { bookTitle, author, reason });
     res.status(201).json({ message: 'Purchase request submitted successfully', request });
   } catch (error: any) {

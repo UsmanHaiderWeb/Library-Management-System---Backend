@@ -37,6 +37,7 @@ export interface RequestWithUser extends Request {
         id: string;
         name: string;
         email: string;
-        collegeId: string
+        collegeId: string;
+        isEmailVerified: boolean;
     };
 }

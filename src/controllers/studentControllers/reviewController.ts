@@ -15,6 +15,11 @@ export const addReviewController = async (req: Request, res: Response): Promise<
             return;
         }
 
+        if (!user.isEmailVerified) {
+            res.status(403).json({ message: 'Verification required. Please verify your email to post reviews.' });
+            return;
+        }
+
         if (rating < 1 || rating > 5) {
             res.status(400).json({ message: 'Rating must be between 1 and 5' });
             return;

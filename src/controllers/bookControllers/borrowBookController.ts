@@ -12,6 +12,16 @@ export const borrowBookController = async (req: Request, res: Response): Promise
             return;
         }
 
+        if (!user.isEmailVerified) {
+            res.status(403).json({ message: 'Verification required. Please verify your email to borrow books.' });
+            return;
+        }
+
+        if (!user.isEmailVerified) {
+            res.status(403).json({ message: 'Verification required. Please verify your email to borrow books.' });
+            return;
+        }
+
         const borrowRequest = await BorrowService.requestBook(user.id, bookId, user.collegeId as string);
 
         res.json({ 

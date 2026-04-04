@@ -40,6 +40,8 @@ model Book {
   College          College?           @relation(fields: [collegeId], references: [id])
   copies           BookCopy[]
   BorrowedRequests BorrowedRequests[]
+  reviews          Review[]
+  savedBooks       SavedBook[]
 
   @@index([id, collegeId])
   @@index([collegeId], map: "Book_collegeId_fkey")
@@ -77,6 +79,8 @@ model User {
   College            College?            @relation(fields: [collegeId], references: [id])
   verificationTokens VerificationToken[]
   ipAddressess       ipAddressess[]
+  reviews            Review[]
+  savedBooks         SavedBook[]
 
   @@index([batchYear, isVerifiedByAdmin, id, email, collegeId, role])
   @@index([collegeId], map: "User_collegeId_fkey")
@@ -199,4 +203,30 @@ enum PurchaseRequestStatus {
 enum TokenType {
   EMAIL_VERIFICATION
   PASSWORD_RESET
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  bookId    String
+  userId    String
+  rating    Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([bookId, userId])
+}
+
+model SavedBook {
+  id        String   @id @default(uuid())
+  bookId    String
+  userId    String
+  createdAt DateTime @default(now())
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([userId, bookId])
 }
