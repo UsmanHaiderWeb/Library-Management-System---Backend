@@ -73,6 +73,8 @@ model User {
   collegeId          String?
   fineBalance        Int                 @default(0)
   role               UserRole            @default(STUDENT)
+  passwordResetRetries   Int             @default(0)
+  passwordResetLastRetry DateTime?
   borrowedBooks      BorrowedBook[]
   borrowedRequests   BorrowedRequests[]
   purchaseRequests   PurchaseRequest[]
@@ -94,6 +96,8 @@ model Admin {
   password           String              @db.VarChar(150)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+  passwordResetRetries   Int             @default(0)
+  passwordResetLastRetry DateTime?
   collegeId          String
   College            College             @relation(fields: [collegeId], references: [id])
   verificationTokens VerificationToken[]

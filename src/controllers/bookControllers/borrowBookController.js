@@ -19,6 +19,14 @@ const borrowBookController = (req, res) => __awaiter(void 0, void 0, void 0, fun
             res.status(400).json({ message: 'Book ID is required' });
             return;
         }
+        if (!user.isEmailVerified) {
+            res.status(403).json({ message: 'Verification required. Please verify your email to borrow books.' });
+            return;
+        }
+        if (!user.isEmailVerified) {
+            res.status(403).json({ message: 'Verification required. Please verify your email to borrow books.' });
+            return;
+        }
         const borrowRequest = yield borrow_service_1.BorrowService.requestBook(user.id, bookId, user.collegeId);
         res.json({
             message: 'Borrow request submitted successfully. Waiting for admin approval.',

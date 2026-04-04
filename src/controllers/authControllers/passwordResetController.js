@@ -26,6 +26,10 @@ const requestPasswordResetController = (req, res) => __awaiter(void 0, void 0, v
             res.status(404).json({ message: error.message });
             return;
         }
+        if (error.message.includes('rate limit') || error.message.includes('maximum number of password reset attempts')) {
+            res.status(429).json({ message: error.message });
+            return;
+        }
         console.error('request reset error:', error);
         res.status(500).json({ message: 'Server error' });
     }
@@ -33,16 +37,18 @@ const requestPasswordResetController = (req, res) => __awaiter(void 0, void 0, v
 exports.requestPasswordResetController = requestPasswordResetController;
 const resetPasswordController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { email, otp, newPassword, type } = req.body;
-        if (!email || !otp || !newPassword || !type) {
+        const { email, token, newPassword, type } = req.body;
+        // Backend will accept token but we might have also legacy otp. We'll map otp to token just in case.
+        const resetToken = token || req.body.otp;
+        if (!email || !resetToken || !newPassword || !type) {
             res.status(400).json({ message: 'All fields are required' });
             return;
         }
-        const result = yield auth_service_1.AuthService.resetPassword({ email, otp, newPassword, type });
+        const result = yield auth_service_1.AuthService.resetPassword({ email, token: resetToken, newPassword, type });
         res.status(200).json(result);
     }
     catch (error) {
-        if (error.message === 'Invalid or expired OTP') {
+        if (error.message === 'Invalid or expired reset token') {
             res.status(400).json({ message: error.message });
             return;
         }

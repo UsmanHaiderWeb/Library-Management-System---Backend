@@ -15,8 +15,10 @@ const studentAuthMiddleware_1 = require("../middlewares/studentAuthMiddleware");
 const getDigitalFileController_1 = require("../controllers/bookControllers/getDigitalFileController");
 const getBookDetailsController_1 = require("../controllers/bookControllers/getBookDetailsController");
 const borrowBookController_1 = require("../controllers/bookControllers/borrowBookController");
+const getPublicBooksController_1 = require("../controllers/bookControllers/getPublicBooksController");
 exports.bookRouter = express_1.default.Router();
 // public routes
+exports.bookRouter.get('/all', getPublicBooksController_1.getPublicBooksController);
 exports.bookRouter.get('/getBookDetails/:bookId', getBookDetailsController_1.getBookDetailsController);
 // Digital Access (Secure)
 exports.bookRouter.get('/digital/:bookId', studentAuthMiddleware_1.studentAuthMiddleware, getDigitalFileController_1.getDigitalFileController);

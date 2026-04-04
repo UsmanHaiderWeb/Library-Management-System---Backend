@@ -8,48 +8,56 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BookService = void 0;
 const prismaDb_1 = require("../helpers/prismaDb");
+const dateUtils_1 = require("../helpers/dateUtils");
+const fs_1 = __importDefault(require("fs"));
 class BookService {
     /**
      * Get all books with advanced filtering and pagination
      */
     static getAllBooks(params) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { collegeId, pageNumber = 0, searchQuery = '', genre, isOnline, availableOnly, pageSize = 20 } = params;
-            const whereClause = {
-                collegeId,
-            };
-            const andConditions = [];
+            const { collegeId, pageNumber = 0, searchQuery = '', genre, isOnline, availableOnly, pageSize = 20, fromDate, toDate } = params;
+            const whereClause = {};
+            if (collegeId) {
+                whereClause.collegeId = collegeId;
+            }
             if (searchQuery.trim() !== '') {
-                andConditions.push({
-                    OR: [
-                        { bookNumber: { contains: searchQuery } },
-                        { bookName: { contains: searchQuery } },
-                        { genre: { contains: searchQuery } },
-                        { author: { contains: searchQuery } },
-                    ],
-                });
+                whereClause.OR = [
+                    { bookNumber: { contains: searchQuery } },
+                    { bookName: { contains: searchQuery } },
+                    { genre: { contains: searchQuery } },
+                    { author: { contains: searchQuery } },
+                ];
             }
             if (genre) {
-                andConditions.push({ genre: { contains: genre } });
+                whereClause.genre = { contains: genre };
             }
             if (isOnline !== undefined) {
-                andConditions.push({ isOnline });
+                whereClause.isOnline = isOnline;
             }
             if (availableOnly) {
-                andConditions.push({
-                    copies: {
-                        some: {
-                            isBorrowed: false,
-                        },
+                whereClause.copies = {
+                    some: {
+                        isBorrowed: false,
                     },
-                });
+                };
             }
-            if (andConditions.length > 0) {
-                whereClause.AND = andConditions;
+            const dateCondition = (0, dateUtils_1.getDateRangeQuery)(fromDate, toDate);
+            if (dateCondition) {
+                whereClause.createdAt = dateCondition;
             }
+            console.log("FINAL_WHERE_CLAUE:", JSON.stringify(whereClause, null, 2));
+            // Write to a local file we can definitely read
+            try {
+                fs_1.default.writeFileSync(__dirname + '/last_query.json', JSON.stringify({ params, whereClause }, null, 2));
+            }
+            catch (e) { }
             const booksCount = yield prismaDb_1.prisma.book.count({
                 where: whereClause,
             });

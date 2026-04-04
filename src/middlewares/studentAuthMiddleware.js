@@ -75,6 +75,7 @@ const studentAuthMiddleware = (req, res, next) => __awaiter(void 0, void 0, void
                 phoneNumber: user === null || user === void 0 ? void 0 : user.phoneNumber,
                 studentId: user === null || user === void 0 ? void 0 : user.studentId,
                 collegeId: college === null || college === void 0 ? void 0 : college.id,
+                isEmailVerified: user === null || user === void 0 ? void 0 : user.isEmailVerified,
             };
             console.log("dataToBeStored: ", dataToBeStored);
             yield redisClient_1.redisClient.hset(`user:${user === null || user === void 0 ? void 0 : user.id}:data`, dataToBeStored);

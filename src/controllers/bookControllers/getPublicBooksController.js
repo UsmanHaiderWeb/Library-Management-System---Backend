@@ -9,33 +9,35 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllBooksController = void 0;
+exports.getPublicBooksController = void 0;
 const book_service_1 = require("../../services/book.service");
-const getAllBooksController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const prismaDb_1 = require("../../helpers/prismaDb");
+const getPublicBooksController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const admin = req.admin;
-        const { pageNumber, searchQuery, genre, isOnline, availableOnly, fromDate, toDate } = req.query;
-        const fs = require('fs');
-        try {
-            fs.appendFileSync('d:/Node/LibraryManagementSystem/Backend/src/controllers/bookControllers/req_logs.txt', `Time: ${new Date().toISOString()} | Query: ${JSON.stringify(req.query)}\n`);
+        const { pageNumber, searchQuery, genre, isOnline, availableOnly, collegeCode } = req.query;
+        let collegeId = undefined;
+        if (collegeCode) {
+            const college = yield prismaDb_1.prisma.college.findUnique({
+                where: { code: collegeCode }
+            });
+            if (college) {
+                collegeId = college.id;
+            }
         }
-        catch (e) { }
-        console.log("getAllBooksController Query:", req.query);
         const result = yield book_service_1.BookService.getAllBooks({
-            collegeId: admin.collegeId,
+            collegeId,
             pageNumber: parseInt(pageNumber) || 0,
             searchQuery: searchQuery || '',
             genre: genre || undefined,
             isOnline: isOnline === 'true' ? true : isOnline === 'false' ? false : undefined,
             availableOnly: availableOnly === 'true',
-            fromDate,
-            toDate
+            pageSize: 15
         });
         res.status(200).json(result);
     }
     catch (error) {
-        console.error('get all books error:', error);
+        console.error('get public books error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
-exports.getAllBooksController = getAllBooksController;
+exports.getPublicBooksController = getPublicBooksController;

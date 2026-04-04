@@ -13,6 +13,7 @@ exports.changeReturnStatusForBorrowedBookController = void 0;
 const prismaDb_1 = require("../../helpers/prismaDb");
 const redisClient_1 = require("../../helpers/redisClient");
 const fine_service_1 = require("../../services/fine.service");
+const notification_service_1 = require("../../services/notification.service");
 const changeReturnStatusForBorrowedBookController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const admin = req.admin;
@@ -58,6 +59,9 @@ const changeReturnStatusForBorrowedBookController = (req, res) => __awaiter(void
             }
             const redisKey = `user:${borrowedBook.userId}:borrowedBooks`;
             yield redisClient_1.redisClient.del(redisKey);
+            // Create notification
+            const bookCopy = yield tx.bookCopy.findUnique({ where: { id: borrowedBook.bookCopyId }, include: { book: { select: { bookName: true } } } });
+            yield notification_service_1.NotificationService.createNotification(borrowedBook.userId, 'Book Return Successful', `You have successfully returned "${bookCopy === null || bookCopy === void 0 ? void 0 : bookCopy.book.bookName}".${fineAmount > 0 ? ` A fine of ₹${fineAmount} has been applied for late return.` : ''}`);
         }));
         res.status(200).json({
             message: "Borrowed book has been returned.",

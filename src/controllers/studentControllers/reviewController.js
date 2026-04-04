@@ -1,0 +1,98 @@
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getBookReviewsController = exports.addReviewController = void 0;
+const prismaDb_1 = require("../../helpers/prismaDb");
+/**
+ * Add or Update Review
+ */
+const addReviewController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const user = req.user;
+        const { bookId, rating, comment } = req.body;
+        if (!user || !user.id || !bookId || !rating) {
+            res.status(400).json({ message: 'User ID, Book ID, and Rating are required' });
+            return;
+        }
+        if (!user.isEmailVerified) {
+            res.status(403).json({ message: 'Verification required. Please verify your email to post reviews.' });
+            return;
+        }
+        if (rating < 1 || rating > 5) {
+            res.status(400).json({ message: 'Rating must be between 1 and 5' });
+            return;
+        }
+        const existingReview = yield prismaDb_1.prisma.review.findFirst({
+            where: { userId: user.id, bookId: bookId }
+        });
+        if (existingReview) {
+            const updatedReview = yield prismaDb_1.prisma.review.update({
+                where: { id: existingReview.id },
+                data: { rating, comment }
+            });
+            res.status(200).json({ message: 'Review updated successfully', review: updatedReview });
+        }
+        else {
+            const newReview = yield prismaDb_1.prisma.review.create({
+                data: {
+                    userId: user.id,
+                    bookId: bookId,
+                    rating,
+                    comment
+                }
+            });
+            res.status(201).json({ message: 'Review added successfully', review: newReview });
+        }
+    }
+    catch (error) {
+        console.error('Add review error:', error);
+        res.status(500).json({ message: 'Server error while submitting review' });
+    }
+});
+exports.addReviewController = addReviewController;
+/**
+ * Get Reviews by Book ID
+ */
+const getBookReviewsController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { bookId } = req.params;
+        if (!bookId) {
+            res.status(400).json({ message: 'Book ID is required' });
+            return;
+        }
+        const reviews = yield prismaDb_1.prisma.review.findMany({
+            where: { bookId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        // Calculate average
+        const avgRating = reviews.length > 0
+            ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+            : 0;
+        res.status(200).json({
+            reviews,
+            totalReviews: reviews.length,
+            averageRating: Number(avgRating.toFixed(1))
+        });
+    }
+    catch (error) {
+        console.error('Get book reviews error:', error);
+        res.status(500).json({ message: 'Server error while fetching reviews' });
+    }
+});
+exports.getBookReviewsController = getBookReviewsController;

@@ -39,16 +39,18 @@ class EmailService {
         });
     }
     /**
-     * Send OTP for Password Reset
+     * Send Link for Password Reset
      */
-    static sendPasswordResetOTP(email, otp) {
+    static sendPasswordResetLink(email, resetLink) {
         return __awaiter(this, void 0, void 0, function* () {
             const html = `
       <h1>Password Reset Request</h1>
-      <p>Your OTP for password reset is: <strong>${otp}</strong></p>
-      <p>This OTP will expire in 15 minutes.</p>
+      <p>Click the link below to reset your password:</p>
+      <a href="${resetLink}" style="display:inline-block;padding:10px 20px;background-color:#007bff;color:#fff;text-decoration:none;border-radius:5px;">Reset Password</a>
+      <p>Or copy this link to your browser: <br/>${resetLink}</p>
+      <p>This link will expire in 15 minutes.</p>
     `;
-            yield this.sendEmail(email, 'LMS - Password Reset OTP', html);
+            yield this.sendEmail(email, 'LMS - Password Reset Link', html);
         });
     }
     /**

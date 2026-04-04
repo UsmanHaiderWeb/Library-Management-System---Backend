@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "npx nodemon server.ts",
     "prisma": "npx prisma db push",
+    "prisma:gen": "npx prisma generate",
+    "build": "npx prisma generate && tsc",
     "test": "jest"
   },
   "devDependencies": {

@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PurchaseService = void 0;
 const prismaDb_1 = require("../helpers/prismaDb");
+const notification_service_1 = require("./notification.service");
 class PurchaseService {
     /**
      * Create a new purchase request
@@ -63,10 +64,12 @@ class PurchaseService {
             if (!request || request.collegeId !== collegeId) {
                 throw new Error('Request not found or access denied');
             }
-            return yield prismaDb_1.prisma.purchaseRequest.update({
+            const updatedRequest = yield prismaDb_1.prisma.purchaseRequest.update({
                 where: { id: requestId },
                 data: { status }
             });
+            yield notification_service_1.NotificationService.createNotification(request.userId, `Purchase Request ${status.charAt(0) + status.slice(1).toLowerCase()}`, `Your purchase request for "${request.bookTitle}" has been ${status.toLowerCase()}.`);
+            return updatedRequest;
         });
     }
 }

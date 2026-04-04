@@ -22,6 +22,9 @@ const createPurchaseRequestController = (req, res) => __awaiter(void 0, void 0, 
         if (!bookTitle) {
             return res.status(400).json({ message: 'Book title is required' });
         }
+        if (!user.isEmailVerified) {
+            return res.status(403).json({ message: 'Verification required. Please verify your email to request books.' });
+        }
         const request = yield purchase_service_1.PurchaseService.createRequest(user.id, user.collegeId, { bookTitle, author, reason });
         res.status(201).json({ message: 'Purchase request submitted successfully', request });
     }

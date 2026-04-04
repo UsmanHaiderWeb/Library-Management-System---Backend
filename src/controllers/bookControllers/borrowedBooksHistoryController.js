@@ -13,15 +13,20 @@ exports.borrowedBooksHistoryController = void 0;
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const express_1 = require("express");
 const prismaDb_1 = require("../../helpers/prismaDb");
+const dateUtils_1 = require("../../helpers/dateUtils");
 const borrowedBooksHistoryController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const admin = req.admin;
-        const { pageNumber, searchQuery } = req.query;
+        const { pageNumber, searchQuery, fromDate, toDate } = req.query;
         // find whereClause to pass to prisma
         const whereClause = {
             collegeId: admin.collegeId,
             status: "returned"
         };
+        const dateCondition = (0, dateUtils_1.getDateRangeQuery)(fromDate, toDate);
+        if (dateCondition) {
+            whereClause.returnedOn = dateCondition;
+        }
         if ((searchQuery === null || searchQuery === void 0 ? void 0 : searchQuery.trim()) !== '') {
             whereClause.OR = [
                 {

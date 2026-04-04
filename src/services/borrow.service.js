@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.BorrowService = void 0;
 const prismaDb_1 = require("../helpers/prismaDb");
 const redisClient_1 = require("../helpers/redisClient");
+const notification_service_1 = require("./notification.service");
 class BorrowService {
     /**
      * Get limits based on user role
@@ -96,10 +97,13 @@ class BorrowService {
      */
     static rejectRequest(requestId, collegeId) {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield prismaDb_1.prisma.borrowedRequests.update({
+            const request = yield prismaDb_1.prisma.borrowedRequests.update({
                 where: { id: requestId, collegeId },
-                data: { status: 'rejected' }
+                data: { status: 'rejected' },
+                include: { book: { select: { bookName: true } } }
             });
+            yield notification_service_1.NotificationService.createNotification(request.userId, 'Borrow Request Rejected', `Your request for "${request.book.bookName}" has been rejected by the librarian.`);
+            return request;
         });
     }
     /**
@@ -153,6 +157,9 @@ class BorrowService {
                 });
                 // Update Redis cache
                 yield redisClient_1.redisClient.set(redisKey, activeCount + 1, 'EX', 3600);
+                // Create notification
+                const book = yield tx.book.findUnique({ where: { id: borrowRequest.bookId }, select: { bookName: true } });
+                yield notification_service_1.NotificationService.createNotification(borrowRequest.userId, 'Borrow Request Accepted', `Your request for "${book === null || book === void 0 ? void 0 : book.bookName}" has been accepted. Please collect it from the library. Due date: ${dueDate.toLocaleDateString()}.`);
                 return borrowedBook;
             }));
         });
