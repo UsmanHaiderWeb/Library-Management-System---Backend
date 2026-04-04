@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -16,14 +10,14 @@ datasource db {
 model College {
   id               String             @id @default(uuid())
   name             String             @db.VarChar(100)
-  code             String             @unique @db.VarChar(10) // e.g., GCUF, UCP
-  admins           Admin[]
-  users            User[]
-  books            Book[]
-  borrowRequests   BorrowedRequests[]
-  borrowBooks      BorrowedBook[]
-  purchaseRequests PurchaseRequest[]
+  code             String             @unique @db.VarChar(10)
   createdAt        DateTime           @default(now())
+  admins           Admin[]
+  books            Book[]
+  borrowBooks      BorrowedBook[]
+  borrowRequests   BorrowedRequests[]
+  purchaseRequests PurchaseRequest[]
+  users            User[]
 }
 
 model Book {
@@ -40,26 +34,26 @@ model Book {
   shelfNumber      Int                @db.MediumInt
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
-  isOnline         Boolean            @default(false) // new
-  onlineFileUrl    String?            @db.LongText // optional: PDF / epub / link
+  isOnline         Boolean            @default(false)
+  onlineFileUrl    String?            @db.LongText
+  collegeId        String?
+  College          College?           @relation(fields: [collegeId], references: [id])
   copies           BookCopy[]
   BorrowedRequests BorrowedRequests[]
-  SavedBooks       SavedBook[]
-  Reviews          Review[]
-  College          College?           @relation(fields: [collegeId], references: [id])
-  collegeId        String?
 
   @@index([id, collegeId])
+  @@index([collegeId], map: "Book_collegeId_fkey")
 }
 
 model BookCopy {
   id           String         @id @default(uuid())
   bookId       String
-  book         Book           @relation(fields: [bookId], references: [id], onDelete: Cascade)
   isBorrowed   Boolean        @default(false)
+  book         Book           @relation(fields: [bookId], references: [id], onDelete: Cascade)
   borrowedBook BorrowedBook[]
 
   @@index([id, bookId])
+  @@index([bookId], map: "BookCopy_bookId_fkey")
 }
 
 model User {
@@ -71,31 +65,21 @@ model User {
   password           String              @db.VarChar(150)
   phoneNumber        String?             @db.VarChar(13)
   isVerifiedByAdmin  Boolean             @default(false)
-  fineBalance        Int                 @default(0)
-  role               UserRole            @default(STUDENT)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   batchYear          Int?
-  borrowedBooks      BorrowedBook[] // one-to-many relation
-  borrowedRequests   BorrowedRequests[]
-  verificationTokens VerificationToken[]
-  purchaseRequests   PurchaseRequest[]
-  ipAddressess       ipAddressess[]
-  savedBooks         SavedBook[]
-  reviews            Review[]
-  notifications      Notification[]
-  College            College?            @relation(fields: [collegeId], references: [id])
   collegeId          String?
-  passwordResetRetries Int               @default(0)
-  passwordResetLastRetry DateTime?
+  fineBalance        Int                 @default(0)
+  role               UserRole            @default(STUDENT)
+  borrowedBooks      BorrowedBook[]
+  borrowedRequests   BorrowedRequests[]
+  purchaseRequests   PurchaseRequest[]
+  College            College?            @relation(fields: [collegeId], references: [id])
+  verificationTokens VerificationToken[]
+  ipAddressess       ipAddressess[]
 
   @@index([batchYear, isVerifiedByAdmin, id, email, collegeId, role])
-}
-
-enum UserRole {
-  STUDENT
-  FACULTY
-  STAFF
+  @@index([collegeId], map: "User_collegeId_fkey")
 }
 
 model Admin {
@@ -108,51 +92,44 @@ model Admin {
   collegeId          String
   College            College             @relation(fields: [collegeId], references: [id])
   verificationTokens VerificationToken[]
-  passwordResetRetries Int               @default(0)
-  passwordResetLastRetry DateTime?
 
   @@index([id, email, collegeId])
+  @@index([collegeId], map: "Admin_collegeId_fkey")
 }
 
 model BorrowedBook {
   id         String             @id @default(uuid())
-  bookCopy   BookCopy           @relation(fields: [bookCopyId], references: [id], onDelete: Cascade)
   bookCopyId String
-  user       User               @relation(fields: [userId], references: [id])
   userId     String
   borrowedOn DateTime           @default(now())
   dueDate    DateTime?
   returnedOn DateTime?
   status     BorrowedBookStatus @default(borrowed)
-  College    College?           @relation(fields: [collegeId], references: [id])
   collegeId  String?
+  bookCopy   BookCopy           @relation(fields: [bookCopyId], references: [id], onDelete: Cascade)
+  College    College?           @relation(fields: [collegeId], references: [id])
+  user       User               @relation(fields: [userId], references: [id])
 
   @@index([id, userId, bookCopyId, collegeId])
-}
-
-enum BorrowedBookStatus {
-  borrowed
-  returned
+  @@index([bookCopyId], map: "BorrowedBook_bookCopyId_fkey")
+  @@index([collegeId], map: "BorrowedBook_collegeId_fkey")
+  @@index([userId], map: "BorrowedBook_userId_fkey")
 }
 
 model BorrowedRequests {
   id          String              @id @default(uuid())
-  book        Book                @relation(fields: [bookId], references: [id], onDelete: Cascade)
   bookId      String
-  user        User                @relation(fields: [userId], references: [id])
   userId      String
   requestedOn DateTime            @default(now())
   status      BorrowRequestStatus @default(pending)
-  College     College?            @relation(fields: [collegeId], references: [id])
   collegeId   String?
+  book        Book                @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  College     College?            @relation(fields: [collegeId], references: [id])
+  user        User                @relation(fields: [userId], references: [id])
 
   @@index([userId, bookId, id, status])
-}
-
-enum BorrowRequestStatus {
-  pending
-  accepted
-  rejected
+  @@index([bookId], map: "BorrowedRequests_bookId_fkey")
+  @@index([collegeId], map: "BorrowedRequests_collegeId_fkey")
 }
 
 model PurchaseRequest {
@@ -161,38 +138,29 @@ model PurchaseRequest {
   author      String?               @db.VarChar(100)
   reason      String?               @db.Text
   status      PurchaseRequestStatus @default(PENDING)
-  requestedBy User                  @relation(fields: [userId], references: [id])
   userId      String
-  College     College?              @relation(fields: [collegeId], references: [id])
   collegeId   String?
   createdAt   DateTime              @default(now())
   updatedAt   DateTime              @updatedAt
+  College     College?              @relation(fields: [collegeId], references: [id])
+  requestedBy User                  @relation(fields: [userId], references: [id])
 
   @@index([userId, collegeId, status])
-}
-
-enum PurchaseRequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
+  @@index([collegeId], map: "PurchaseRequest_collegeId_fkey")
 }
 
 model VerificationToken {
   id        String    @id @default(uuid())
-  token     String    @db.VarChar(250) // six-digit code or verification link
+  token     String    @db.VarChar(250)
   userId    String?
-  user      User?     @relation(fields: [userId], references: [id])
+  type      TokenType @default(EMAIL_VERIFICATION)
+  expiresAt DateTime
   adminId   String?
   admin     Admin?    @relation(fields: [adminId], references: [id])
-  type      TokenType @default(EMAIL_VERIFICATION) // or PASSWORD_RESET
-  expiresAt DateTime
+  user      User?     @relation(fields: [userId], references: [id])
 
   @@index([userId, adminId, type, id])
-}
-
-enum TokenType {
-  EMAIL_VERIFICATION
-  PASSWORD_RESET
+  @@index([adminId], map: "VerificationToken_adminId_fkey")
 }
 
 model ipAddressess {
@@ -205,41 +173,30 @@ model ipAddressess {
   @@index([userId, id, ipAddress])
 }
 
-model SavedBook {
-  id        String   @id @default(uuid())
-  userId    String
-  bookId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([userId, bookId])
-  @@index([userId, bookId])
+enum UserRole {
+  STUDENT
+  FACULTY
+  STAFF
 }
 
-model Review {
-  id        String   @id @default(uuid())
-  rating    Int      @default(5) // 1 to 5
-  comment   String?  @db.Text
-  userId    String
-  bookId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId, bookId, rating])
+enum BorrowedBookStatus {
+  borrowed
+  returned
 }
 
-model Notification {
-  id        String   @id @default(uuid())
-  title     String   @db.VarChar(200)
-  message   String   @db.Text
-  isRead    Boolean  @default(false)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@index([userId, isRead])
+enum BorrowRequestStatus {
+  pending
+  accepted
+  rejected
 }
 
+enum PurchaseRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}

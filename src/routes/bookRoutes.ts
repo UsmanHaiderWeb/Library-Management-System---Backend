@@ -11,11 +11,13 @@ import { studentAuthMiddleware } from '../middlewares/studentAuthMiddleware';
 import { getDigitalFileController } from '../controllers/bookControllers/getDigitalFileController';
 import { getBookDetailsController } from '../controllers/bookControllers/getBookDetailsController';
 import { borrowBookController } from '../controllers/bookControllers/borrowBookController';
+import { getPublicBooksController } from '../controllers/bookControllers/getPublicBooksController';
 import { RequestHandler } from 'express';
 
 export const bookRouter = express.Router();
 
 // public routes
+bookRouter.get('/all', getPublicBooksController as RequestHandler);
 bookRouter.get('/getBookDetails/:bookId', getBookDetailsController as RequestHandler);
 
 // Digital Access (Secure)

@@ -3,6 +3,7 @@ import express from 'express';
 import { signupController as studentSignupController } from '../controllers/studentAuthControllers/signupController';
 import { validateLoginFieldsMiddleware, validateSignupFieldsMiddleware, validateVerificationCodeMiddleware as validateVerificationCode } from '../middlewares/ValidateFormFields';
 import { loginController as studentLoginController } from '../controllers/studentAuthControllers/loginController';
+import { logoutController as studentLogoutController } from '../controllers/studentAuthControllers/logoutController';
 import { verifyEmailController as studentEmailVerificationController } from '../controllers/studentAuthControllers/verifyEmailController';
 import { getUserDetailsController } from '../controllers/studentControllers/getUserDetailsController';
 import { updateProfileController } from '../controllers/studentControllers/updateProfileController';
@@ -20,6 +21,7 @@ export const studentRouter = express.Router();
 // Auth routes
 studentRouter.post('/signup', validateSignupFieldsMiddleware, studentSignupController);
 studentRouter.post('/login', validateLoginFieldsMiddleware, studentLoginController);
+studentRouter.post('/logout', studentAuthMiddleware, studentLogoutController);
 studentRouter.post('/verify-email', validateVerificationCode, studentEmailVerificationController);
 
 // Password Reset

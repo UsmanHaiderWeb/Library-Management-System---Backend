@@ -7,7 +7,7 @@ export class BookService {
      * Get all books with advanced filtering and pagination
      */
     static async getAllBooks(params: {
-        collegeId: string;
+        collegeId?: string;
         pageNumber?: number;
         searchQuery?: string;
         genre?: string;
@@ -29,9 +29,10 @@ export class BookService {
             toDate
         } = params;
 
-        const whereClause: any = {
-            collegeId,
-        };
+        const whereClause: any = {};
+        if (collegeId) {
+            whereClause.collegeId = collegeId;
+        }
 
         if (searchQuery.trim() !== '') {
             whereClause.OR = [
