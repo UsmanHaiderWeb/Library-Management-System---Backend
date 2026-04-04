@@ -81,6 +81,7 @@ model User {
   ipAddressess       ipAddressess[]
   reviews            Review[]
   savedBooks         SavedBook[]
+  notifications      Notification[]
 
   @@index([batchYear, isVerifiedByAdmin, id, email, collegeId, role])
   @@index([collegeId], map: "User_collegeId_fkey")
@@ -229,4 +230,16 @@ model SavedBook {
 
   @@unique([userId, bookId])
   @@index([userId, bookId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
 }

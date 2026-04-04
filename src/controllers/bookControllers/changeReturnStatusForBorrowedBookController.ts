@@ -3,6 +3,7 @@ import { RequestWithAdmin } from "../../helpers/interfaces";
 import { prisma } from "../../helpers/prismaDb";
 import { redisClient } from "../../helpers/redisClient";
 import { FineService } from "../../services/fine.service";
+import { NotificationService } from "../../services/notification.service";
 
 export const changeReturnStatusForBorrowedBookController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -58,6 +59,14 @@ export const changeReturnStatusForBorrowedBookController = async (req: Request, 
 
             const redisKey = `user:${borrowedBook.userId}:borrowedBooks`;
             await redisClient.del(redisKey);
+
+            // Create notification
+            const bookCopy = await tx.bookCopy.findUnique({ where: { id: borrowedBook.bookCopyId }, include: { book: { select: { bookName: true } } } });
+            await NotificationService.createNotification(
+                borrowedBook.userId,
+                'Book Return Successful',
+                `You have successfully returned "${bookCopy?.book.bookName}".${fineAmount > 0 ? ` A fine of ₹${fineAmount} has been applied for late return.` : ''}`
+            );
         });
 
         res.status(200).json({

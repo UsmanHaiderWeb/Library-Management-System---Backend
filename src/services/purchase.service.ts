@@ -1,5 +1,6 @@
 import { prisma } from '../helpers/prismaDb';
 import { PurchaseRequestStatus } from '@prisma/client';
+import { NotificationService } from './notification.service';
 
 export class PurchaseService {
   /**
@@ -52,9 +53,17 @@ export class PurchaseService {
       throw new Error('Request not found or access denied');
     }
 
-    return await prisma.purchaseRequest.update({
+    const updatedRequest = await prisma.purchaseRequest.update({
       where: { id: requestId },
       data: { status }
     });
+
+    await NotificationService.createNotification(
+      request.userId,
+      `Purchase Request ${status.charAt(0) + status.slice(1).toLowerCase()}`,
+      `Your purchase request for "${request.bookTitle}" has been ${status.toLowerCase()}.`
+    );
+
+    return updatedRequest;
   }
 }

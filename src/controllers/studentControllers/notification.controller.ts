@@ -23,12 +23,12 @@ export const getNotificationsController = async (req: Request, res: Response) =>
 /**
  * Mark a single notification as read
  */
-export const markNotificationAsReadController = async (req: Request, res: Response) => {
+export const markAsReadController = async (req: Request, res: Response) => {
   try {
     const user = (req as RequestWithUser).user;
-    const { id } = req.params;
+    const { notificationId } = req.params;
 
-    await NotificationService.markAsRead(id, user.id);
+    await NotificationService.markAsRead(notificationId, user.id);
     res.json({ message: 'Notification marked as read' });
   } catch (error: any) {
     res.status(500).json({ message: error.message || 'Server error' });
@@ -38,7 +38,7 @@ export const markNotificationAsReadController = async (req: Request, res: Respon
 /**
  * Mark all notifications as read for the current student
  */
-export const markAllNotificationsAsReadController = async (req: Request, res: Response) => {
+export const markAllAsReadController = async (req: Request, res: Response) => {
   try {
     const user = (req as RequestWithUser).user;
 

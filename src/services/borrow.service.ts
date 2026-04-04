@@ -1,6 +1,7 @@
 import { prisma } from '../helpers/prismaDb';
 import { redisClient } from '../helpers/redisClient';
 import { UserRole } from '@prisma/client';
+import { NotificationService } from './notification.service';
 
 export class BorrowService {
   /**
@@ -94,10 +95,19 @@ export class BorrowService {
    * Reject a borrow request
    */
   static async rejectRequest(requestId: string, collegeId: string) {
-    return await prisma.borrowedRequests.update({
+    const request = await prisma.borrowedRequests.update({
       where: { id: requestId, collegeId },
-      data: { status: 'rejected' }
+      data: { status: 'rejected' },
+      include: { book: { select: { bookName: true } } }
     });
+
+    await NotificationService.createNotification(
+      request.userId,
+      'Borrow Request Rejected',
+      `Your request for "${request.book.bookName}" has been rejected by the librarian.`
+    );
+
+    return request;
   }
 
   /**
@@ -161,6 +171,14 @@ export class BorrowService {
 
       // Update Redis cache
       await redisClient.set(redisKey, activeCount + 1, 'EX', 3600);
+
+      // Create notification
+      const book = await tx.book.findUnique({ where: { id: borrowRequest.bookId }, select: { bookName: true } });
+      await NotificationService.createNotification(
+        borrowRequest.userId,
+        'Borrow Request Accepted',
+        `Your request for "${book?.bookName}" has been accepted. Please collect it from the library. Due date: ${dueDate.toLocaleDateString()}.`
+      );
 
       return borrowedBook;
     });
