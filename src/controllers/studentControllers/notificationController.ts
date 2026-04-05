@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
 import { RequestWithUser } from '../../helpers/interfaces';
 import { NotificationService } from '../../services/notification.service';

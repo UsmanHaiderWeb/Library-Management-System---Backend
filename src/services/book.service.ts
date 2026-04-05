@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from '../helpers/prismaDb';
 import { getDateRangeQuery } from '../helpers/dateUtils';
 

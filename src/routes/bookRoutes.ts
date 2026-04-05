@@ -5,7 +5,6 @@ import { createBookController } from '../controllers/bookControllers/createBookC
 import { deleteBookController } from '../controllers/bookControllers/deleteBookController';
 import { updateBookController } from '../controllers/bookControllers/updateBookController';
 
-import { prisma } from '../helpers/prismaDb';
 import { studentAuthMiddleware } from '../middlewares/studentAuthMiddleware';
 import { getDigitalFileController } from '../controllers/bookControllers/getDigitalFileController';
 import { getBookDetailsController } from '../controllers/bookControllers/getBookDetailsController';

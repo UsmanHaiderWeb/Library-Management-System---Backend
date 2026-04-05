@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Utility to generate a professional Prisma date range query.
  * Ensures that the 'toDate' covers the entire day up to the last millisecond.

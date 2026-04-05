@@ -57,7 +57,7 @@ export const updateBookController = async (req: Request, res: Response): Promise
         const currentTotal = existingBook._count.copies;
         const newTotal = Number(totalBooks);
 
-        let updateData: any = {
+        const updateData: any = {
             bookNumber,
             isbn: isbn || null,
             bookName,

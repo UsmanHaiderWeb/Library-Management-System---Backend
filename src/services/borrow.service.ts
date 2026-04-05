@@ -36,7 +36,7 @@ export class BorrowService {
 
     // Check current active borrows (count from Redis or DB)
     const redisKey = `user:${userId}:borrowedBooks`;
-    let activeCountStr = await redisClient.get(redisKey);
+    const activeCountStr = await redisClient.get(redisKey);
     let activeCount: number;
 
     if (activeCountStr === null) {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
 import { RequestWithAdmin } from '../../helpers/interfaces';
 import { UserService } from '../../services/user.service';

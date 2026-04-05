@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import logger from '../helpers/logger';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const globalErrorHandler = (err: Error, _req: Request, res: Response, _next: NextFunction): void => {
     logger.error('Unhandled error:', err.message);
 

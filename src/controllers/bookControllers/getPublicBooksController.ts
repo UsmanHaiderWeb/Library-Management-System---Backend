@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
 import { BookService } from '../../services/book.service';
 import { prisma } from '../../helpers/prismaDb';

@@ -45,7 +45,7 @@ function matchAction(method: string, path: string): { action: string; entity: st
   const pathSegments = path.split('/').filter(Boolean);
 
   for (let len = pathSegments.length; len >= 2; len--) {
-    const prefix = '/' + pathSegments.slice(0, len).join('/');
+    const prefix = '/' + pathSegments.slice(0, len)?.join('/');
     const key = `${method} ${prefix}`;
 
     if (ACTION_MAP[key]) {

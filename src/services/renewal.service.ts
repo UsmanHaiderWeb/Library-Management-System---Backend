@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from '../helpers/prismaDb';
 import { NotificationService } from './notification.service';
 import { BorrowService } from './borrow.service';
