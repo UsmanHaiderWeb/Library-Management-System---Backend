@@ -23,6 +23,7 @@ import { updateUserRoleController } from '../controllers/adminControllers/update
 import { bulkImportBooksController, bulkImportUsersController } from '../controllers/adminControllers/bulkImportController';
 import { upload } from '../helpers/multer';
 import { getAllAccountRequestsController, approveAccountController, denyAccountController, getAdminUserDetailsController } from '../controllers/adminControllers/accountVerificationController';
+import { getAnalyticsController } from '../controllers/adminControllers/analyticsController';
 
 export const adminRouter = express.Router();
 
@@ -34,6 +35,7 @@ adminRouter.post('/login', validateLoginFieldsMiddleware, adminLoginController);
 adminRouter.get('/getAdminDetails', adminAuthMiddleware, getAdminDetailsController);
 adminRouter.get('/dashboard-stats', adminAuthMiddleware, getDashboardStatsController);
 adminRouter.get('/borrowing-trends', adminAuthMiddleware, getBorrowingTrendsController);
+adminRouter.get('/analytics', adminAuthMiddleware, getAnalyticsController);
 
 // Import routes
 adminRouter.post('/import/books', adminAuthMiddleware, upload.single('file'), bulkImportBooksController as any);
