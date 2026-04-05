@@ -10,6 +10,7 @@ import { adminRouter } from './src/routes/adminRoutes';
 import './src/helpers/redisClient';
 import { globalErrorHandler } from './src/middlewares/errorHandler';
 import { apiRateLimiter } from './src/middlewares/rateLimiter';
+import { auditMiddleware } from './src/middlewares/auditMiddleware';
 
 
 // Load environment variables
@@ -42,6 +43,9 @@ app.get('/', (_, res) => {
 
 // Rate limiting
 app.use('/api', apiRateLimiter);
+
+// Audit logging for admin mutations
+app.use(auditMiddleware);
 
 app.use('/api/admin', adminRouter);
 app.use('/api/books', bookRouter);

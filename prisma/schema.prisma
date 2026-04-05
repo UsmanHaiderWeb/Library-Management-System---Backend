@@ -88,6 +88,7 @@ model User {
   fines              Fine[]
   renewalRequests    RenewalRequest[]
   reservations       Reservation[]
+  notificationPreference NotificationPreference?
 
   @@index([batchYear, isVerifiedByAdmin, id, email, collegeId, role])
   @@index([collegeId], map: "User_collegeId_fkey")
@@ -305,4 +306,38 @@ enum ReservationStatus {
   NOTIFIED
   FULFILLED
   CANCELLED
+}
+
+model NotificationPreference {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  emailBorrowStatus Boolean  @default(true)
+  emailDueReminder  Boolean  @default(true)
+  emailOverdue      Boolean  @default(true)
+  emailReservation  Boolean  @default(true)
+  emailRenewal      Boolean  @default(true)
+  emailPurchase     Boolean  @default(true)
+  inAppBorrowStatus Boolean  @default(true)
+  inAppDueReminder  Boolean  @default(true)
+  inAppOverdue      Boolean  @default(true)
+  inAppReservation  Boolean  @default(true)
+  inAppRenewal      Boolean  @default(true)
+  inAppPurchase     Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  adminId     String
+  action      String   @db.VarChar(100)
+  entity      String   @db.VarChar(50)
+  entityId    String?  @db.VarChar(100)
+  details     String?  @db.Text
+  ipAddress   String?  @db.VarChar(45)
+  createdAt   DateTime @default(now())
+
+  @@index([adminId, action, entity, createdAt])
 }

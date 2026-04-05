@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import express from 'express';
+import express, { RequestHandler } from 'express';
 import { signupController as studentSignupController } from '../controllers/studentAuthControllers/signupController';
 import { validateLoginFieldsMiddleware, validateSignupFieldsMiddleware, validateVerificationCodeMiddleware as validateVerificationCode } from '../middlewares/ValidateFormFields';
 import { loginController as studentLoginController } from '../controllers/studentAuthControllers/loginController';
@@ -9,7 +8,7 @@ import { getUserDetailsController } from '../controllers/studentControllers/getU
 import { updateProfileController } from '../controllers/studentControllers/updateProfileController';
 import { changePasswordController } from '../controllers/studentAuthControllers/changePasswordController';
 import { toggleSavedBookController, getWishlistController } from '../controllers/studentControllers/wishlistController';
-import { addReviewController, getBookReviewsController } from '../controllers/studentControllers/reviewController';
+import { addReviewController, getBookReviewsController, getMyReviewsController, deleteReviewController } from '../controllers/studentControllers/reviewController';
 import { getNotificationsController, markNotificationAsReadController, markAllNotificationsAsReadController } from '../controllers/studentControllers/notificationController';
 import { studentAuthMiddleware } from '../middlewares/studentAuthMiddleware';
 import { requestPasswordResetController, resetPasswordController } from '../controllers/authControllers/passwordResetController';
@@ -19,6 +18,7 @@ import { createPurchaseRequestController } from '../controllers/userControllers/
 import { authRateLimiter } from '../middlewares/rateLimiter';
 import { requestRenewalController, getMyFinesController, getMyRenewalRequestsController } from '../controllers/bookControllers/renewalController';
 import { joinWaitlistController, cancelReservationController, getMyReservationsController, getWaitlistPositionController } from '../controllers/bookControllers/reservationController';
+import { getNotificationPreferencesController, updateNotificationPreferencesController } from '../controllers/studentControllers/notificationPreferenceController';
 
 export const studentRouter = express.Router();
 
@@ -34,7 +34,7 @@ studentRouter.post('/forgot-password', requestPasswordResetController);
 studentRouter.post('/reset-password', resetPasswordController);
 
 // Purchase Requests
-studentRouter.post('/purchase-request', studentAuthMiddleware, createPurchaseRequestController as any);
+studentRouter.post('/purchase-request', studentAuthMiddleware, createPurchaseRequestController as RequestHandler);
 
 // detail routes
 studentRouter.get('/getUserDetails', studentAuthMiddleware, getUserDetailsController);
@@ -47,22 +47,28 @@ studentRouter.get('/wishlist', studentAuthMiddleware, getWishlistController);
 
 // Reviews
 studentRouter.post('/reviews', studentAuthMiddleware, addReviewController);
+studentRouter.get('/reviews/my', studentAuthMiddleware, getMyReviewsController);
+studentRouter.delete('/reviews/:reviewId', studentAuthMiddleware, deleteReviewController);
 studentRouter.get('/books/:bookId/reviews', getBookReviewsController);
 
 // Renewals
-studentRouter.post('/renew/:borrowedBookId', studentAuthMiddleware, requestRenewalController as any);
+studentRouter.post('/renew/:borrowedBookId', studentAuthMiddleware, requestRenewalController as RequestHandler);
 studentRouter.get('/renewal-requests', studentAuthMiddleware, getMyRenewalRequestsController);
 
 // Fines
 studentRouter.get('/fines', studentAuthMiddleware, getMyFinesController);
 
 // Reservations / Waitlist
-studentRouter.post('/reserve/:bookId', studentAuthMiddleware, joinWaitlistController as any);
-studentRouter.delete('/reserve/:bookId', studentAuthMiddleware, cancelReservationController as any);
+studentRouter.post('/reserve/:bookId', studentAuthMiddleware, joinWaitlistController as RequestHandler);
+studentRouter.delete('/reserve/:bookId', studentAuthMiddleware, cancelReservationController as RequestHandler);
 studentRouter.get('/reservations', studentAuthMiddleware, getMyReservationsController);
-studentRouter.get('/reserve/:bookId/position', studentAuthMiddleware, getWaitlistPositionController as any);
+studentRouter.get('/reserve/:bookId/position', studentAuthMiddleware, getWaitlistPositionController as RequestHandler);
 
 // Notifications
 studentRouter.get('/notifications', studentAuthMiddleware, getNotificationsController);
 studentRouter.put('/notifications/read-all', studentAuthMiddleware, markAllNotificationsAsReadController);
 studentRouter.put('/notifications/read/:id', studentAuthMiddleware, markNotificationAsReadController);
+
+// Notification Preferences
+studentRouter.get('/notification-preferences', studentAuthMiddleware, getNotificationPreferencesController);
+studentRouter.put('/notification-preferences', studentAuthMiddleware, updateNotificationPreferencesController);

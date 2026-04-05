@@ -53,6 +53,74 @@ export const addReviewController = async (req: Request, res: Response): Promise<
 };
 
 /**
+ * Get My Reviews (all reviews by the logged-in user)
+ */
+export const getMyReviewsController = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = (req as any).user;
+
+        if (!user || !user.id) {
+            res.status(401).json({ message: 'Authentication required' });
+            return;
+        }
+
+        const reviews = await prisma.review.findMany({
+            where: { userId: user.id },
+            include: {
+                book: {
+                    select: {
+                        id: true,
+                        bookName: true,
+                        author: true,
+                        image: true,
+                        bgColor: true,
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        res.status(200).json({
+            reviews,
+            totalReviews: reviews.length
+        });
+    } catch (error) {
+        console.error('Get my reviews error:', error);
+        res.status(500).json({ message: 'Server error while fetching your reviews' });
+    }
+};
+
+/**
+ * Delete a Review
+ */
+export const deleteReviewController = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = (req as any).user;
+        const { reviewId } = req.params;
+
+        if (!user || !user.id) {
+            res.status(401).json({ message: 'Authentication required' });
+            return;
+        }
+
+        const review = await prisma.review.findFirst({
+            where: { id: reviewId, userId: user.id }
+        });
+
+        if (!review) {
+            res.status(404).json({ message: 'Review not found or not yours' });
+            return;
+        }
+
+        await prisma.review.delete({ where: { id: reviewId } });
+        res.status(200).json({ message: 'Review deleted successfully' });
+    } catch (error) {
+        console.error('Delete review error:', error);
+        res.status(500).json({ message: 'Server error while deleting review' });
+    }
+};
+
+/**
  * Get Reviews by Book ID
  */
 export const getBookReviewsController = async (req: Request, res: Response): Promise<void> => {

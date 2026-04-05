@@ -1,10 +1,14 @@
 import app from './app';
 import { config } from './src/config';
+import { scheduleOverdueReminders } from './src/jobs/overdueReminder.job';
 
 const port = config.PORT;
 
 const server = app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
+
+    // Start scheduled jobs
+    scheduleOverdueReminders();
 });
 
 // Handle graceful shutdown

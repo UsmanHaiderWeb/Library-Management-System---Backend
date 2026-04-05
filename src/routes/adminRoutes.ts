@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import express from 'express';
+import express, { RequestHandler } from 'express';
 import { validateLoginFieldsMiddleware, validateAdminSignupFieldsMiddleware } from '../middlewares/ValidateFormFields';
 import { adminSignupController } from '../controllers/adminAuthControllers/adminSignupController';
 import { adminLoginController } from '../controllers/adminAuthControllers/adminLoginController';
@@ -26,6 +25,8 @@ import { getAllAccountRequestsController, approveAccountController, denyAccountC
 import { authRateLimiter } from '../middlewares/rateLimiter';
 import { getAnalyticsController } from '../controllers/adminControllers/analyticsController';
 import { getAllRenewalRequestsController, approveRenewalController, rejectRenewalController, getAllFinesController } from '../controllers/bookControllers/renewalController';
+import { getOverdueSummaryController, triggerOverdueRemindersController } from '../controllers/adminControllers/overdueController';
+import { getAuditLogsController, getAuditFiltersController } from '../controllers/adminControllers/auditController';
 
 export const adminRouter = express.Router();
 
@@ -40,22 +41,22 @@ adminRouter.get('/borrowing-trends', adminAuthMiddleware, getBorrowingTrendsCont
 adminRouter.get('/analytics', adminAuthMiddleware, getAnalyticsController);
 
 // Import routes
-adminRouter.post('/import/books', adminAuthMiddleware, upload.single('file'), bulkImportBooksController as any);
-adminRouter.post('/import/users', adminAuthMiddleware, upload.single('file'), bulkImportUsersController as any);
+adminRouter.post('/import/books', adminAuthMiddleware, upload.single('file'), bulkImportBooksController as RequestHandler);
+adminRouter.post('/import/users', adminAuthMiddleware, upload.single('file'), bulkImportUsersController as RequestHandler);
 
 // user - student related routes
 adminRouter.get('/getAllUsers', adminAuthMiddleware, getAllUsersController);
-adminRouter.patch('/update-user-role/:userId', adminAuthMiddleware, updateUserRoleController as any);
+adminRouter.patch('/update-user-role/:userId', adminAuthMiddleware, updateUserRoleController as RequestHandler);
 
 // Account verification routes
 adminRouter.get('/getAllAccountRequests', adminAuthMiddleware, getAllAccountRequestsController);
-adminRouter.post('/verify-account/:userId', adminAuthMiddleware, approveAccountController as any);
-adminRouter.post('/deny-account/:userId', adminAuthMiddleware, denyAccountController as any);
-adminRouter.get('/getUserDetails/:userId', adminAuthMiddleware, getAdminUserDetailsController as any);
+adminRouter.post('/verify-account/:userId', adminAuthMiddleware, approveAccountController as RequestHandler);
+adminRouter.post('/deny-account/:userId', adminAuthMiddleware, denyAccountController as RequestHandler);
+adminRouter.get('/getUserDetails/:userId', adminAuthMiddleware, getAdminUserDetailsController as RequestHandler);
 
 // Purchase Requests
 adminRouter.get('/purchase-requests', adminAuthMiddleware, getAllPurchaseRequestsController);
-adminRouter.post('/purchase-requests/:requestId/status', adminAuthMiddleware, updatePurchaseRequestStatusController as any);
+adminRouter.post('/purchase-requests/:requestId/status', adminAuthMiddleware, updatePurchaseRequestStatusController as RequestHandler);
 
 // books related routes
 adminRouter.get('/getAllBooks', adminAuthMiddleware, getAllBooksController);
@@ -68,11 +69,19 @@ adminRouter.post('/borrowed-books/:borrowedBookId/change-status', adminAuthMiddl
 
 // Renewal routes
 adminRouter.get('/renewal-requests', adminAuthMiddleware, getAllRenewalRequestsController);
-adminRouter.post('/renewal-requests/:requestId/approve', adminAuthMiddleware, approveRenewalController as any);
-adminRouter.post('/renewal-requests/:requestId/reject', adminAuthMiddleware, rejectRenewalController as any);
+adminRouter.post('/renewal-requests/:requestId/approve', adminAuthMiddleware, approveRenewalController as RequestHandler);
+adminRouter.post('/renewal-requests/:requestId/reject', adminAuthMiddleware, rejectRenewalController as RequestHandler);
 
 // Fine routes
 adminRouter.get('/fines', adminAuthMiddleware, getAllFinesController);
+
+// Overdue routes
+adminRouter.get('/overdue-summary', adminAuthMiddleware, getOverdueSummaryController);
+adminRouter.post('/overdue-reminders/trigger', adminAuthMiddleware, triggerOverdueRemindersController);
+
+// Audit log routes
+adminRouter.get('/audit-logs', adminAuthMiddleware, getAuditLogsController);
+adminRouter.get('/audit-logs/filters', adminAuthMiddleware, getAuditFiltersController);
 
 // imageKit authentication route
 adminRouter.get('/imagekit-authentication-tokens', adminAuthMiddleware, getImageKitAuthenticationTokens);
