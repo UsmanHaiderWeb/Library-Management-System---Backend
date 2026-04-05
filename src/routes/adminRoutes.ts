@@ -24,6 +24,7 @@ import { bulkImportBooksController, bulkImportUsersController } from '../control
 import { upload } from '../helpers/multer';
 import { getAllAccountRequestsController, approveAccountController, denyAccountController, getAdminUserDetailsController } from '../controllers/adminControllers/accountVerificationController';
 import { getAnalyticsController } from '../controllers/adminControllers/analyticsController';
+import { getAllRenewalRequestsController, approveRenewalController, rejectRenewalController, getAllFinesController } from '../controllers/bookControllers/renewalController';
 
 export const adminRouter = express.Router();
 
@@ -63,6 +64,14 @@ adminRouter.get('/borrowed-books/history', adminAuthMiddleware, borrowedBooksHis
 adminRouter.post('/borrow-requests/change-status/:borrowRequestId', adminAuthMiddleware, changeStatusForBorrowBookRequestController);
 adminRouter.post('/borrowed-books/:borrowedBookId/change-status', adminAuthMiddleware, changeReturnStatusForBorrowedBookController);
 
+
+// Renewal routes
+adminRouter.get('/renewal-requests', adminAuthMiddleware, getAllRenewalRequestsController);
+adminRouter.post('/renewal-requests/:requestId/approve', adminAuthMiddleware, approveRenewalController as any);
+adminRouter.post('/renewal-requests/:requestId/reject', adminAuthMiddleware, rejectRenewalController as any);
+
+// Fine routes
+adminRouter.get('/fines', adminAuthMiddleware, getAllFinesController);
 
 // imageKit authentication route
 adminRouter.get('/imagekit-authentication-tokens', adminAuthMiddleware, getImageKitAuthenticationTokens);

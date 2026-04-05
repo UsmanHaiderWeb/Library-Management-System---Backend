@@ -1,7 +1,7 @@
 import { prisma } from '../helpers/prismaDb';
 
 export class FineService {
-    private static DAILY_FINE_AMOUNT = 10; // e.g., 10 currency units per day
+    private static DAILY_FINE_AMOUNT = 10; // ₹10 per day
 
     /**
      * Calculate fine for a returned book
@@ -16,9 +16,9 @@ export class FineService {
     }
 
     /**
-   * Apply fine to a user's account
-   */
-    static async applyFine(userId: string, amount: number, tx: any) {
+     * Apply fine to a user's account and record the transaction
+     */
+    static async applyFine(userId: string, amount: number, borrowedBookId: string, daysOverdue: number, tx: any) {
         if (amount <= 0) return;
 
         await tx.user.update({
@@ -29,11 +29,75 @@ export class FineService {
                 },
             },
         });
+
+        // Record fine transaction
+        await tx.fine.create({
+            data: {
+                userId,
+                borrowedBookId,
+                amount,
+                daysOverdue,
+            },
+        });
     }
 
     /**
-     * Record a fine for a user (This would ideally be a separate Fine model, but using a log/comment for now if model missing)
-     * Note: The current schema doesn't have a 'Fine' model. I should add it or use metadata. 
-     * I'll assume I should add a Fine model to schema.prisma.
+     * Get fine history for a user
      */
+    static async getUserFines(userId: string) {
+        return prisma.fine.findMany({
+            where: { userId },
+            include: {
+                borrowedBook: {
+                    include: {
+                        bookCopy: {
+                            include: {
+                                book: {
+                                    select: { bookName: true, author: true },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+
+    /**
+     * Get all fines for a college (admin view)
+     */
+    static async getCollegeFines(collegeId: string, pageNumber: number = 0, pageSize: number = 20) {
+        const whereClause = {
+            borrowedBook: { collegeId },
+        };
+
+        const [fines, total] = await Promise.all([
+            prisma.fine.findMany({
+                where: whereClause,
+                include: {
+                    user: { select: { id: true, name: true, studentId: true, email: true } },
+                    borrowedBook: {
+                        include: {
+                            bookCopy: {
+                                include: {
+                                    book: { select: { bookName: true, bookNumber: true } },
+                                },
+                            },
+                        },
+                    },
+                },
+                skip: pageNumber * pageSize,
+                take: pageSize,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.fine.count({ where: whereClause }),
+        ]);
+
+        return {
+            fines,
+            totalPages: Math.ceil(total / pageSize),
+            totalCount: total,
+        };
+    }
 }

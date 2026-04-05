@@ -84,6 +84,8 @@ model User {
   reviews            Review[]
   savedBooks         SavedBook[]
   notifications      Notification[]
+  fines              Fine[]
+  renewalRequests    RenewalRequest[]
 
   @@index([batchYear, isVerifiedByAdmin, id, email, collegeId, role])
   @@index([collegeId], map: "User_collegeId_fkey")
@@ -118,6 +120,8 @@ model BorrowedBook {
   bookCopy   BookCopy           @relation(fields: [bookCopyId], references: [id], onDelete: Cascade)
   College    College?           @relation(fields: [collegeId], references: [id])
   user       User               @relation(fields: [userId], references: [id])
+  fines      Fine[]
+  renewalRequests RenewalRequest[]
 
   @@index([id, userId, bookCopyId, collegeId])
   @@index([bookCopyId], map: "BorrowedBook_bookCopyId_fkey")
@@ -246,4 +250,36 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+}
+
+model Fine {
+  id             String   @id @default(uuid())
+  userId         String
+  borrowedBookId String
+  amount         Int
+  daysOverdue    Int
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  borrowedBook   BorrowedBook @relation(fields: [borrowedBookId], references: [id], onDelete: Cascade)
+
+  @@index([userId, borrowedBookId])
+}
+
+model RenewalRequest {
+  id             String              @id @default(uuid())
+  borrowedBookId String
+  userId         String
+  requestedOn    DateTime            @default(now())
+  status         RenewalRequestStatus @default(PENDING)
+  newDueDate     DateTime
+  borrowedBook   BorrowedBook        @relation(fields: [borrowedBookId], references: [id], onDelete: Cascade)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, borrowedBookId, status])
+}
+
+enum RenewalRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

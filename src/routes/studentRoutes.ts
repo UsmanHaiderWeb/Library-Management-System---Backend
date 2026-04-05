@@ -16,6 +16,7 @@ import { requestPasswordResetController, resetPasswordController } from '../cont
 import { resendVerificationCodeController } from '../controllers/studentAuthControllers/resendVerificationController';
 
 import { createPurchaseRequestController } from '../controllers/userControllers/purchaseRequestController';
+import { requestRenewalController, getMyFinesController, getMyRenewalRequestsController } from '../controllers/bookControllers/renewalController';
 
 export const studentRouter = express.Router();
 
@@ -45,6 +46,13 @@ studentRouter.get('/wishlist', studentAuthMiddleware, getWishlistController);
 // Reviews
 studentRouter.post('/reviews', studentAuthMiddleware, addReviewController);
 studentRouter.get('/books/:bookId/reviews', getBookReviewsController);
+
+// Renewals
+studentRouter.post('/renew/:borrowedBookId', studentAuthMiddleware, requestRenewalController as any);
+studentRouter.get('/renewal-requests', studentAuthMiddleware, getMyRenewalRequestsController);
+
+// Fines
+studentRouter.get('/fines', studentAuthMiddleware, getMyFinesController);
 
 // Notifications
 studentRouter.get('/notifications', studentAuthMiddleware, getNotificationsController);

@@ -8,6 +8,7 @@ import session from 'express-session';
 import { bookRouter } from './src/routes/bookRoutes';
 import { adminRouter } from './src/routes/adminRoutes';
 import './src/helpers/redisClient';
+import { globalErrorHandler } from './src/middlewares/errorHandler';
 
 
 // Load environment variables
@@ -42,5 +43,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/books', bookRouter);
 app.use('/api/students', studentRouter);
 
+// Global error handler (must be after routes)
+app.use(globalErrorHandler);
 
 export default app;

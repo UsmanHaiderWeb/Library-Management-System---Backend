@@ -54,7 +54,8 @@ export const changeReturnStatusForBorrowedBookController = async (req: Request, 
             });
 
             if (fineAmount > 0) {
-                await FineService.applyFine(borrowedBook.userId, fineAmount, tx);
+                const daysOverdue = Math.ceil((returnedOn.getTime() - borrowedBook.dueDate!.getTime()) / (1000 * 3600 * 24));
+                await FineService.applyFine(borrowedBook.userId, fineAmount, borrowedBook.id, daysOverdue, tx);
             }
 
             const redisKey = `user:${borrowedBook.userId}:borrowedBooks`;
