@@ -18,6 +18,7 @@ import { resendVerificationCodeController } from '../controllers/studentAuthCont
 import { createPurchaseRequestController } from '../controllers/userControllers/purchaseRequestController';
 import { authRateLimiter } from '../middlewares/rateLimiter';
 import { requestRenewalController, getMyFinesController, getMyRenewalRequestsController } from '../controllers/bookControllers/renewalController';
+import { joinWaitlistController, cancelReservationController, getMyReservationsController, getWaitlistPositionController } from '../controllers/bookControllers/reservationController';
 
 export const studentRouter = express.Router();
 
@@ -54,6 +55,12 @@ studentRouter.get('/renewal-requests', studentAuthMiddleware, getMyRenewalReques
 
 // Fines
 studentRouter.get('/fines', studentAuthMiddleware, getMyFinesController);
+
+// Reservations / Waitlist
+studentRouter.post('/reserve/:bookId', studentAuthMiddleware, joinWaitlistController as any);
+studentRouter.delete('/reserve/:bookId', studentAuthMiddleware, cancelReservationController as any);
+studentRouter.get('/reservations', studentAuthMiddleware, getMyReservationsController);
+studentRouter.get('/reserve/:bookId/position', studentAuthMiddleware, getWaitlistPositionController as any);
 
 // Notifications
 studentRouter.get('/notifications', studentAuthMiddleware, getNotificationsController);

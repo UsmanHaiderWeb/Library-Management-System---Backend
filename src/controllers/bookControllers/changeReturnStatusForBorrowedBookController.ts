@@ -4,6 +4,7 @@ import { prisma } from "../../helpers/prismaDb";
 import { redisClient } from "../../helpers/redisClient";
 import { FineService } from "../../services/fine.service";
 import { NotificationService } from "../../services/notification.service";
+import { ReservationService } from "../../services/reservation.service";
 
 export const changeReturnStatusForBorrowedBookController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -69,6 +70,15 @@ export const changeReturnStatusForBorrowedBookController = async (req: Request, 
                 `You have successfully returned "${bookCopy?.book.bookName}".${fineAmount > 0 ? ` A fine of ₹${fineAmount} has been applied for late return.` : ''}`
             );
         });
+
+        // Notify next person in the reservation queue for this book
+        const bookCopyForReservation = await prisma.bookCopy.findUnique({
+            where: { id: borrowedBook.bookCopyId },
+            select: { bookId: true },
+        });
+        if (bookCopyForReservation) {
+            await ReservationService.notifyNextInQueue(bookCopyForReservation.bookId);
+        }
 
         res.status(200).json({
             message: "Borrowed book has been returned.",

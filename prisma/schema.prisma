@@ -42,6 +42,7 @@ model Book {
   BorrowedRequests BorrowedRequests[]
   reviews          Review[]
   savedBooks       SavedBook[]
+  reservations     Reservation[]
 
   @@index([id, collegeId])
   @@index([collegeId], map: "Book_collegeId_fkey")
@@ -86,6 +87,7 @@ model User {
   notifications      Notification[]
   fines              Fine[]
   renewalRequests    RenewalRequest[]
+  reservations       Reservation[]
 
   @@index([batchYear, isVerifiedByAdmin, id, email, collegeId, role])
   @@index([collegeId], map: "User_collegeId_fkey")
@@ -282,4 +284,25 @@ enum RenewalRequestStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+model Reservation {
+  id        String            @id @default(uuid())
+  bookId    String
+  userId    String
+  position  Int
+  status    ReservationStatus @default(WAITING)
+  createdAt DateTime          @default(now())
+  book      Book              @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, userId])
+  @@index([bookId, status, position])
+}
+
+enum ReservationStatus {
+  WAITING
+  NOTIFIED
+  FULFILLED
+  CANCELLED
 }
