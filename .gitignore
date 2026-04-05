@@ -134,3 +134,11 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Debug/log files
+global_logs.txt
+**/req_logs.txt
+**/last_query.json
+
+# Compiled JS alongside TS source (use dist/ for output)
+src/**/*.js

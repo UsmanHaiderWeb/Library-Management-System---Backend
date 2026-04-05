@@ -78,12 +78,6 @@ export const updateBookController = async (req: Request, res: Response): Promise
                 }))
             };
         } else if (newTotal < currentTotal) {
-            // Logic to remove copies is complex because we shouldn't remove borrowed copies.
-            // For now, let's only allow increasing or keeping same, or if decreasing, only remove unborrowed.
-            // This is a bit complex for a quick implementation. 
-            // Let's just update the count in the book record, but maybe not delete copies automatically to be safe, 
-            // OR try to delete N unborrowed copies.
-
             const copiesToRemove = currentTotal - newTotal;
             const unborrowedCopies = await prisma.bookCopy.findMany({
                 where: {
@@ -94,27 +88,19 @@ export const updateBookController = async (req: Request, res: Response): Promise
             });
 
             if (unborrowedCopies.length < copiesToRemove) {
-                // Cannot reduce as requested because copies are borrowed
-                // We could either error out or just delete what we can.
-                // Let's just delete what we can and update totalBooks to (current - deleted).
-                // But the user requested `newTotal`. 
-                // Let's strictly update what we can.
-            }
-
-            // Actually, for this iteration, let's just update the Book metadata. 
-            // Managing physical copies sync is a business logic detail. 
-            // I will just update the metadata and if they increase, I add copies. 
-            // If they decrease, I will NOT delete copies to avoid data loss of active loans.
-            // Wait, if I don't delete copies, `totalBooks` field will be out of sync with `copies` table count.
-            // Let's try to delete unborrowed copies if possible.
-
-            if (unborrowedCopies.length > 0) {
-                await prisma.bookCopy.deleteMany({
-                    where: {
-                        id: { in: unborrowedCopies.map(c => c.id) }
-                    }
+                const borrowedCount = currentTotal - unborrowedCopies.length;
+                const minAllowed = borrowedCount;
+                res.status(400).json({
+                    message: `Cannot reduce to ${newTotal}. There are ${borrowedCount} borrowed copies. Minimum allowed is ${minAllowed}.`
                 });
+                return;
             }
+
+            await prisma.bookCopy.deleteMany({
+                where: {
+                    id: { in: unborrowedCopies.map(c => c.id) }
+                }
+            });
         }
 
         const updatedBook = await prisma.book.update({

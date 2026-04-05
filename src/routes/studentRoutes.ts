@@ -13,6 +13,7 @@ import { addReviewController, getBookReviewsController } from '../controllers/st
 import { getNotificationsController, markNotificationAsReadController, markAllNotificationsAsReadController } from '../controllers/studentControllers/notificationController';
 import { studentAuthMiddleware } from '../middlewares/studentAuthMiddleware';
 import { requestPasswordResetController, resetPasswordController } from '../controllers/authControllers/passwordResetController';
+import { resendVerificationCodeController } from '../controllers/studentAuthControllers/resendVerificationController';
 
 import { createPurchaseRequestController } from '../controllers/userControllers/purchaseRequestController';
 
@@ -23,6 +24,7 @@ studentRouter.post('/signup', validateSignupFieldsMiddleware, studentSignupContr
 studentRouter.post('/login', validateLoginFieldsMiddleware, studentLoginController);
 studentRouter.post('/logout', studentAuthMiddleware, studentLogoutController);
 studentRouter.post('/verify-email', validateVerificationCode, studentEmailVerificationController);
+studentRouter.post('/resend-verification', resendVerificationCodeController);
 
 // Password Reset
 studentRouter.post('/forgot-password', requestPasswordResetController);

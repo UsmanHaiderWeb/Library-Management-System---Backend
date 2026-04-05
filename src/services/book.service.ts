@@ -1,6 +1,5 @@
 import { prisma } from '../helpers/prismaDb';
 import { getDateRangeQuery } from '../helpers/dateUtils';
-import fs from 'fs';
 
 export class BookService {
     /**
@@ -63,13 +62,6 @@ export class BookService {
         if (dateCondition) {
             whereClause.createdAt = dateCondition;
         }
-
-        console.log("FINAL_WHERE_CLAUE:", JSON.stringify(whereClause, null, 2));
-        
-        // Write to a local file we can definitely read
-        try {
-            fs.writeFileSync(__dirname + '/last_query.json', JSON.stringify({ params, whereClause }, null, 2));
-        } catch (e) {}
 
         const booksCount = await prisma.book.count({
             where: whereClause,

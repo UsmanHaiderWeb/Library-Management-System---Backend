@@ -15,6 +15,9 @@ export const validateSignupFieldsMiddleware = [
     body('name').notEmpty().withMessage('Name is required'),
     body('studentId').notEmpty().withMessage('Student ID is required'),
     body('collegeCode').notEmpty().withMessage('College Code is required'),
+    body('phoneNumber')
+        .optional()
+        .isMobilePhone('any').withMessage('Please enter a valid phone number'),
 ];
 
 export const validateAdminSignupFieldsMiddleware = [

@@ -115,4 +115,50 @@ export class AdminService {
             activeLoans
         };
     }
+
+    /**
+     * Get daily borrowing trends for the last N days
+     */
+    static async getBorrowingTrends(collegeId: string, days: number = 30) {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
+        startDate.setHours(0, 0, 0, 0);
+
+        const borrowedBooks = await prisma.borrowedBook.findMany({
+            where: {
+                collegeId,
+                borrowedOn: { gte: startDate },
+            },
+            select: {
+                borrowedOn: true,
+            },
+            orderBy: {
+                borrowedOn: 'asc',
+            },
+        });
+
+        // Group by date
+        const dailyCounts: Record<string, number> = {};
+
+        // Initialize all days to 0
+        for (let i = 0; i < days; i++) {
+            const date = new Date(startDate);
+            date.setDate(date.getDate() + i);
+            const key = date.toISOString().split('T')[0];
+            dailyCounts[key] = 0;
+        }
+
+        // Count borrows per day
+        for (const book of borrowedBooks) {
+            const key = book.borrowedOn.toISOString().split('T')[0];
+            if (dailyCounts[key] !== undefined) {
+                dailyCounts[key]++;
+            }
+        }
+
+        return Object.entries(dailyCounts).map(([date, count]) => ({
+            time: date,
+            value: count,
+        }));
+    }
 }

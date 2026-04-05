@@ -14,7 +14,7 @@ import { changeReturnStatusForBorrowedBookController } from '../controllers/book
 import { borrowedBooksHistoryController } from '../controllers/bookControllers/borrowedBooksHistoryController';
 import { getImageKitAuthenticationTokens } from '../controllers/getImageKitAuthenticationTokens';
 
-import { getDashboardStatsController } from '../controllers/adminControllers/getDashboardStatsController';
+import { getDashboardStatsController, getBorrowingTrendsController } from '../controllers/adminControllers/getDashboardStatsController';
 
 import { getAllPurchaseRequestsController, updatePurchaseRequestStatusController } from '../controllers/userControllers/purchaseRequestController';
 
@@ -22,6 +22,7 @@ import { updateUserRoleController } from '../controllers/adminControllers/update
 
 import { bulkImportBooksController, bulkImportUsersController } from '../controllers/adminControllers/bulkImportController';
 import { upload } from '../helpers/multer';
+import { getAllAccountRequestsController, approveAccountController, denyAccountController, getAdminUserDetailsController } from '../controllers/adminControllers/accountVerificationController';
 
 export const adminRouter = express.Router();
 
@@ -32,6 +33,7 @@ adminRouter.post('/login', validateLoginFieldsMiddleware, adminLoginController);
 // admin routes
 adminRouter.get('/getAdminDetails', adminAuthMiddleware, getAdminDetailsController);
 adminRouter.get('/dashboard-stats', adminAuthMiddleware, getDashboardStatsController);
+adminRouter.get('/borrowing-trends', adminAuthMiddleware, getBorrowingTrendsController);
 
 // Import routes
 adminRouter.post('/import/books', adminAuthMiddleware, upload.single('file'), bulkImportBooksController as any);
@@ -40,6 +42,12 @@ adminRouter.post('/import/users', adminAuthMiddleware, upload.single('file'), bu
 // user - student related routes
 adminRouter.get('/getAllUsers', adminAuthMiddleware, getAllUsersController);
 adminRouter.patch('/update-user-role/:userId', adminAuthMiddleware, updateUserRoleController as any);
+
+// Account verification routes
+adminRouter.get('/getAllAccountRequests', adminAuthMiddleware, getAllAccountRequestsController);
+adminRouter.post('/verify-account/:userId', adminAuthMiddleware, approveAccountController as any);
+adminRouter.post('/deny-account/:userId', adminAuthMiddleware, denyAccountController as any);
+adminRouter.get('/getUserDetails/:userId', adminAuthMiddleware, getAdminUserDetailsController as any);
 
 // Purchase Requests
 adminRouter.get('/purchase-requests', adminAuthMiddleware, getAllPurchaseRequestsController);
