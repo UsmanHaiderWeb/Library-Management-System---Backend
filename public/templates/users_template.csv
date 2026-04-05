@@ -1,0 +1,3 @@
+name,email,studentId,password,phoneNumber,batchYear,role
+John Doe,john@example.com,STD001,password123,+1234567890,2024,STUDENT
+Jane Smith,jane@example.com,STD002,,+0987654321,2024,FACULTY

@@ -23,14 +23,15 @@ import { updateUserRoleController } from '../controllers/adminControllers/update
 import { bulkImportBooksController, bulkImportUsersController } from '../controllers/adminControllers/bulkImportController';
 import { upload } from '../helpers/multer';
 import { getAllAccountRequestsController, approveAccountController, denyAccountController, getAdminUserDetailsController } from '../controllers/adminControllers/accountVerificationController';
+import { authRateLimiter } from '../middlewares/rateLimiter';
 import { getAnalyticsController } from '../controllers/adminControllers/analyticsController';
 import { getAllRenewalRequestsController, approveRenewalController, rejectRenewalController, getAllFinesController } from '../controllers/bookControllers/renewalController';
 
 export const adminRouter = express.Router();
 
 // Auth routes
-adminRouter.post('/signup', validateAdminSignupFieldsMiddleware, adminSignupController);
-adminRouter.post('/login', validateLoginFieldsMiddleware, adminLoginController);
+adminRouter.post('/signup', authRateLimiter, validateAdminSignupFieldsMiddleware, adminSignupController);
+adminRouter.post('/login', authRateLimiter, validateLoginFieldsMiddleware, adminLoginController);
 
 // admin routes
 adminRouter.get('/getAdminDetails', adminAuthMiddleware, getAdminDetailsController);

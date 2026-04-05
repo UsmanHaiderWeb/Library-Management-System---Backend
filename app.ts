@@ -9,6 +9,7 @@ import { bookRouter } from './src/routes/bookRoutes';
 import { adminRouter } from './src/routes/adminRoutes';
 import './src/helpers/redisClient';
 import { globalErrorHandler } from './src/middlewares/errorHandler';
+import { apiRateLimiter } from './src/middlewares/rateLimiter';
 
 
 // Load environment variables
@@ -38,6 +39,9 @@ app.get('/', (_, res) => {
     res.json({ message: 'Welcome to the LMS Backend API' });
     return;
 });
+
+// Rate limiting
+app.use('/api', apiRateLimiter);
 
 app.use('/api/admin', adminRouter);
 app.use('/api/books', bookRouter);

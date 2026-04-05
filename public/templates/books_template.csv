@@ -1,0 +1,3 @@
+bookNumber,bookName,author,genre,summary,totalBooks,almirahNumber,shelfNumber,image,bgColor,isOnline,onlineFileUrl
+BK001,Example Book Title,Author Name,"Fiction, Thriller",A brief summary of the book.,5,1,1,https://example.com/cover.jpg,#3B82F6,false,
+BK002,Online Book Example,Another Author,Science Fiction,Summary of the online book.,3,2,1,https://example.com/cover2.jpg,#10B981,true,https://example.com/book.pdf

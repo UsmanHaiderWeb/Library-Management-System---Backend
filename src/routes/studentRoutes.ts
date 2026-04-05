@@ -16,13 +16,14 @@ import { requestPasswordResetController, resetPasswordController } from '../cont
 import { resendVerificationCodeController } from '../controllers/studentAuthControllers/resendVerificationController';
 
 import { createPurchaseRequestController } from '../controllers/userControllers/purchaseRequestController';
+import { authRateLimiter } from '../middlewares/rateLimiter';
 import { requestRenewalController, getMyFinesController, getMyRenewalRequestsController } from '../controllers/bookControllers/renewalController';
 
 export const studentRouter = express.Router();
 
 // Auth routes
-studentRouter.post('/signup', validateSignupFieldsMiddleware, studentSignupController);
-studentRouter.post('/login', validateLoginFieldsMiddleware, studentLoginController);
+studentRouter.post('/signup', authRateLimiter, validateSignupFieldsMiddleware, studentSignupController);
+studentRouter.post('/login', authRateLimiter, validateLoginFieldsMiddleware, studentLoginController);
 studentRouter.post('/logout', studentAuthMiddleware, studentLogoutController);
 studentRouter.post('/verify-email', validateVerificationCode, studentEmailVerificationController);
 studentRouter.post('/resend-verification', resendVerificationCodeController);
