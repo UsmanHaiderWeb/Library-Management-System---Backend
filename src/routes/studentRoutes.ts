@@ -19,6 +19,10 @@ import { authRateLimiter } from '../middlewares/rateLimiter';
 import { requestRenewalController, getMyFinesController, getMyRenewalRequestsController } from '../controllers/bookControllers/renewalController';
 import { joinWaitlistController, cancelReservationController, getMyReservationsController, getWaitlistPositionController } from '../controllers/bookControllers/reservationController';
 import { getNotificationPreferencesController, updateNotificationPreferencesController } from '../controllers/studentControllers/notificationPreferenceController';
+import { uploadAvatarController, removeAvatarController } from '../controllers/studentControllers/avatarController';
+import multer from 'multer';
+
+const avatarUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 export const studentRouter = express.Router();
 
@@ -72,3 +76,7 @@ studentRouter.put('/notifications/read/:id', studentAuthMiddleware, markNotifica
 // Notification Preferences
 studentRouter.get('/notification-preferences', studentAuthMiddleware, getNotificationPreferencesController);
 studentRouter.put('/notification-preferences', studentAuthMiddleware, updateNotificationPreferencesController);
+
+// Avatar
+studentRouter.post('/avatar', studentAuthMiddleware, avatarUpload.single('avatar'), uploadAvatarController as RequestHandler);
+studentRouter.delete('/avatar', studentAuthMiddleware, removeAvatarController as RequestHandler);

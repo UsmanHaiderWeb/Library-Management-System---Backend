@@ -67,6 +67,8 @@ model User {
   isEmailVerified    Boolean             @default(false)
   password           String              @db.VarChar(150)
   phoneNumber        String?             @db.VarChar(13)
+  avatar             String?             @db.Text
+  avatarFileId       String?             @db.VarChar(100)
   isVerifiedByAdmin  Boolean             @default(false)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
