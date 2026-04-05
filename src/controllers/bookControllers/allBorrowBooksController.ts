@@ -3,6 +3,7 @@ import { Request, response, Response } from "express";
 import { RequestWithAdmin } from "../../helpers/interfaces";
 import { prisma } from "../../helpers/prismaDb";
 import { getDateRangeQuery } from "../../helpers/dateUtils";
+import logger from '../../helpers/logger';
 
 export const allBorrowBooksController = async (req: Request, res: Response) => {
     try {
@@ -84,7 +85,7 @@ export const allBorrowBooksController = async (req: Request, res: Response) => {
 
         res.json({ borrowedBooks, totalPages: Math.ceil(totalBorrowedBooksCount / 20) })
     } catch (error) {
-        console.log("Controller all borrowed books error:", error);
+        logger.info("Controller all borrowed books error:", error);
         response.status(500).json({ message: "Internal Server Error." })
     }
     return;

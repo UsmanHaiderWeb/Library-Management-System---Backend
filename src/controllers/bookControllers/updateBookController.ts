@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { RequestWithAdmin } from '../../helpers/interfaces';
 import { prisma } from '../../helpers/prismaDb';
+import logger from '../../helpers/logger';
 
 export const updateBookController = async (req: Request, res: Response): Promise<void> => {
     const admin = (req as RequestWithAdmin).admin;
@@ -113,7 +114,7 @@ export const updateBookController = async (req: Request, res: Response): Promise
         res.status(200).json({ message: 'Book updated successfully', book: updatedBook });
 
     } catch (error: any) {
-        console.error('Update book error:', error?.message || error);
+        logger.error('Update book error:', error?.message || error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };

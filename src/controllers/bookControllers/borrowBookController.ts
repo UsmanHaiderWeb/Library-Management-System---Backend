@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { RequestWithUser } from '../../helpers/interfaces';
 import { BorrowService } from '../../services/borrow.service';
+import logger from '../../helpers/logger';
 
 export const borrowBookController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -24,7 +25,7 @@ export const borrowBookController = async (req: Request, res: Response): Promise
             borrowRequest
         });
     } catch (error: any) {
-        console.error('borrow book error:', error);
+        logger.error('borrow book error:', error);
         res.status(error.message.includes('limit') || error.message.includes('already') ? 400 : 500)
            .json({ message: error.message || 'Server error' });
     }

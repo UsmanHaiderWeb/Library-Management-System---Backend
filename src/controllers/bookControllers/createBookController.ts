@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { RequestWithAdmin } from '../../helpers/interfaces';
 import { prisma } from '../../helpers/prismaDb';
+import logger from '../../helpers/logger';
 
 
 export const createBookController = async (req: Request, res: Response): Promise<void> => {
@@ -73,7 +74,7 @@ export const createBookController = async (req: Request, res: Response): Promise
         res.status(201).json({ message: 'Book created successfully', book });
 
     } catch (error: any) {
-        console.error('Create book error:', error?.message || error);
+        logger.error('Create book error:', error?.message || error);
         res.status(500).json({ message: 'Internal server error' });
     }
     return;

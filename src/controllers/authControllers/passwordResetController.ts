@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
 import { AuthService } from '../../services/auth.service';
+import logger from '../../helpers/logger';
 
 export const requestPasswordResetController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -22,7 +23,7 @@ export const requestPasswordResetController = async (req: Request, res: Response
             res.status(429).json({ message: error.message });
             return;
         }
-        console.error('request reset error:', error);
+        logger.error('request reset error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -46,7 +47,7 @@ export const resetPasswordController = async (req: Request, res: Response): Prom
             res.status(400).json({ message: error.message });
             return;
         }
-        console.error('reset password error:', error);
+        logger.error('reset password error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

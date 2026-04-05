@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
+import logger from '../helpers/logger';
 
 export const globalErrorHandler = (err: Error, _req: Request, res: Response, _next: NextFunction): void => {
-    console.error('Unhandled error:', err.message);
+    logger.error('Unhandled error:', err.message);
 
     res.status(500).json({
         message: process.env.NODE_ENV === 'production'

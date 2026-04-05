@@ -1,4 +1,5 @@
 import { prisma } from '../helpers/prismaDb';
+import logger from '../helpers/logger';
 
 export interface AuditLogEntry {
   adminId: string;
@@ -26,7 +27,7 @@ export class AuditService {
         },
       });
     } catch (error) {
-      console.error('Error creating audit log:', error);
+      logger.error('Error creating audit log:', error);
       return null;
     }
   }

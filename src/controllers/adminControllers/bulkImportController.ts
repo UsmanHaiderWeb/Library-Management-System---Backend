@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { RequestWithAdmin } from '../../helpers/interfaces';
 import { ImportService } from '../../services/import.service';
+import logger from '../../helpers/logger';
 
 /**
  * Bulk import books via CSV (Admin only)
@@ -23,7 +24,7 @@ export const bulkImportBooksController = async (req: Request, res: Response) => 
             books: result
         });
     } catch (error: any) {
-        console.error('bulk import books error:', error);
+        logger.error('bulk import books error:', error);
         res.status(500).json({ message: error.message || 'Server error' });
     }
 };
@@ -48,7 +49,7 @@ export const bulkImportUsersController = async (req: Request, res: Response) => 
             users: result
         });
     } catch (error: any) {
-        console.error('bulk import users error:', error);
+        logger.error('bulk import users error:', error);
         res.status(500).json({ message: error.message || 'Server error' });
     }
 };

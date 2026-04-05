@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { RequestWithAdmin } from "../../helpers/interfaces";
 import { AdminService } from "../../services/admin.service";
+import logger from '../../helpers/logger';
 
 export const getDashboardStatsController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -15,7 +16,7 @@ export const getDashboardStatsController = async (req: Request, res: Response): 
 
         res.status(200).json({ stats });
     } catch (error) {
-        console.error("get dashboard stats error:", error);
+        logger.error("get dashboard stats error:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 };
@@ -34,7 +35,7 @@ export const getBorrowingTrendsController = async (req: Request, res: Response):
 
         res.status(200).json({ trends });
     } catch (error) {
-        console.error("get borrowing trends error:", error);
+        logger.error("get borrowing trends error:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 };

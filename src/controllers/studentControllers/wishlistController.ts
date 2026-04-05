@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
 import { prisma } from '../../helpers/prismaDb';
+import logger from '../../helpers/logger';
 
 /**
  * Toggle Save Book (Add to or Remove from Wishlist)
@@ -44,7 +45,7 @@ export const toggleSavedBookController = async (req: Request, res: Response): Pr
             res.status(201).json({ message: 'Book added to wishlist', isSaved: true });
         }
     } catch (error) {
-        console.error('Toggle saved book error:', error);
+        logger.error('Toggle saved book error:', error);
         res.status(500).json({ message: 'Server error while toggling wishlist' });
     }
 };
@@ -80,7 +81,7 @@ export const getWishlistController = async (req: Request, res: Response): Promis
 
         res.status(200).json({ savedBooks });
     } catch (error) {
-        console.error('Get wishlist error:', error);
+        logger.error('Get wishlist error:', error);
         res.status(500).json({ message: 'Server error while fetching wishlist' });
     }
 };

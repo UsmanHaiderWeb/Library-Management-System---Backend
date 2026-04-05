@@ -5,6 +5,7 @@ import { prisma } from '../../helpers/prismaDb';
 import { redisClient } from '../../helpers/redisClient';
 import { VerificationToken } from '@prisma/client';
 import jwt from 'jsonwebtoken';
+import logger from '../../helpers/logger';
 
 export const verifyEmailController = async (req: express.Request, res: express.Response): Promise<void> => {
     try {
@@ -108,7 +109,7 @@ export const verifyEmailController = async (req: express.Request, res: express.R
             });
         })
     } catch (error) {
-        console.error('Error in verifyEmailController:', error);
+        logger.error('Error in verifyEmailController:', error);
         res.status(500).json({
             message: 'Internal server error'
         });

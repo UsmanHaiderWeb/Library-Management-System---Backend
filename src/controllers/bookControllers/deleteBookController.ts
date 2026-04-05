@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../helpers/prismaDb';
 import { RequestWithAdmin } from '../../helpers/interfaces';
+import logger from '../../helpers/logger';
 
 export const deleteBookController = async (req: Request, res: Response): Promise<void> => {
     const admin = (req as RequestWithAdmin).admin;
@@ -45,7 +46,7 @@ export const deleteBookController = async (req: Request, res: Response): Promise
         res.status(200).json({ message: 'Book deleted successfully' });
 
     } catch (error: any) {
-        console.error('Delete book error:', error?.message || error);
+        logger.error('Delete book error:', error?.message || error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };

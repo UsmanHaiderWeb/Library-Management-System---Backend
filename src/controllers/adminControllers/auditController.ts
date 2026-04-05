@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { AuditService } from '../../services/audit.service';
+import logger from '../../helpers/logger';
 
 /**
  * Get audit logs with pagination and optional filters (Admin only)
@@ -22,7 +23,7 @@ export const getAuditLogsController = async (req: Request, res: Response) => {
       ...result,
     });
   } catch (error) {
-    console.error('Error fetching audit logs:', error);
+    logger.error('Error fetching audit logs:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch audit logs' });
   }
 };
@@ -43,7 +44,7 @@ export const getAuditFiltersController = async (_req: Request, res: Response) =>
       entities,
     });
   } catch (error) {
-    console.error('Error fetching audit filters:', error);
+    logger.error('Error fetching audit filters:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch filters' });
   }
 };

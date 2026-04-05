@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
 import { UserService } from '../../services/user.service';
+import logger from '../../helpers/logger';
 
 export const getUserDetailsController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -20,7 +21,7 @@ export const getUserDetailsController = async (req: Request, res: Response): Pro
 
         res.status(200).json(data);
     } catch (error) {
-        console.error('get user details error:', error);
+        logger.error('get user details error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

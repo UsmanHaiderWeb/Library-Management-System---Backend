@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { RequestWithAdmin } from '../../helpers/interfaces';
 import { BookService } from '../../services/book.service';
+import logger from '../../helpers/logger';
 
 export const getAllBooksController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -20,7 +21,7 @@ export const getAllBooksController = async (req: Request, res: Response): Promis
 
         res.status(200).json(result);
     } catch (error) {
-        console.error('get all books error:', error);
+        logger.error('get all books error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

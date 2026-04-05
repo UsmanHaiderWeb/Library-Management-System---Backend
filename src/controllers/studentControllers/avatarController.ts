@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../../helpers/prismaDb';
 import { getImageKit, getTransformedUrl, avatarTransforms } from '../../helpers/imagekit';
+import logger from '../../helpers/logger';
 
 /**
  * Upload or update user avatar via ImageKit (server-side upload)
@@ -82,7 +83,7 @@ export const uploadAvatarController = async (req: Request, res: Response): Promi
             }
         });
     } catch (error) {
-        console.error('Avatar upload error:', error);
+        logger.error('Avatar upload error:', error);
         res.status(500).json({ message: 'Server error while uploading avatar' });
     }
 };
@@ -120,7 +121,7 @@ export const removeAvatarController = async (req: Request, res: Response): Promi
 
         res.status(200).json({ message: 'Avatar removed successfully' });
     } catch (error) {
-        console.error('Remove avatar error:', error);
+        logger.error('Remove avatar error:', error);
         res.status(500).json({ message: 'Server error while removing avatar' });
     }
 };

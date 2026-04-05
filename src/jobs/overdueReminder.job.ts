@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import { OverdueService } from '../services/overdue.service';
+import logger from '../helpers/logger';
 
 /**
  * Schedule overdue reminder jobs
@@ -14,9 +15,9 @@ export function scheduleOverdueReminders() {
     try {
       await OverdueService.runAllReminders();
     } catch (error) {
-      console.error('Overdue reminder cron job failed:', error);
+      logger.error('Overdue reminder cron job failed:', error);
     }
   });
 
-  console.log('Overdue reminder cron job scheduled (daily at 8:00 AM)');
+  logger.info('Overdue reminder cron job scheduled (daily at 8:00 AM)');
 }

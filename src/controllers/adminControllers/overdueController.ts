@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { OverdueService } from '../../services/overdue.service';
+import logger from '../../helpers/logger';
 
 /**
  * Get overdue books summary (Admin only)
@@ -37,7 +38,7 @@ export const getOverdueSummaryController = async (_req: Request, res: Response) 
       },
     });
   } catch (error) {
-    console.error('Error fetching overdue summary:', error);
+    logger.error('Error fetching overdue summary:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch overdue summary' });
   }
 };
@@ -55,7 +56,7 @@ export const triggerOverdueRemindersController = async (_req: Request, res: Resp
       data: result,
     });
   } catch (error) {
-    console.error('Error triggering reminders:', error);
+    logger.error('Error triggering reminders:', error);
     res.status(500).json({ success: false, message: 'Failed to send reminders' });
   }
 };

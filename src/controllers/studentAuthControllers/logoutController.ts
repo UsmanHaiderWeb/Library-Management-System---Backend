@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
 import { redisClient } from '../../helpers/redisClient';
+import logger from '../../helpers/logger';
 
 export const logoutController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -11,7 +12,7 @@ export const logoutController = async (req: Request, res: Response): Promise<voi
         }
         res.status(200).json({ message: 'Logged out successfully' });
     } catch (error) {
-        console.error('Logout error:', error);
+        logger.error('Logout error:', error);
         res.status(500).json({ message: 'Server error during logout' });
     }
 };

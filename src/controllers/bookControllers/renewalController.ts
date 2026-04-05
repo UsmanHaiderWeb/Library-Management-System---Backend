@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { RequestWithUser, RequestWithAdmin } from '../../helpers/interfaces';
 import { RenewalService } from '../../services/renewal.service';
 import { FineService } from '../../services/fine.service';
+import logger from '../../helpers/logger';
 
 // Student: request renewal
 export const requestRenewalController = async (req: Request, res: Response): Promise<void> => {
@@ -34,7 +35,7 @@ export const getMyFinesController = async (req: Request, res: Response): Promise
 
         res.status(200).json({ fines });
     } catch (error) {
-        console.error('get fines error:', error);
+        logger.error('get fines error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -47,7 +48,7 @@ export const getMyRenewalRequestsController = async (req: Request, res: Response
 
         res.status(200).json({ renewalRequests: requests });
     } catch (error) {
-        console.error('get renewal requests error:', error);
+        logger.error('get renewal requests error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -62,7 +63,7 @@ export const getAllRenewalRequestsController = async (req: Request, res: Respons
 
         res.status(200).json({ renewalRequests: requests });
     } catch (error) {
-        console.error('get renewal requests error:', error);
+        logger.error('get renewal requests error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -105,7 +106,7 @@ export const getAllFinesController = async (req: Request, res: Response): Promis
 
         res.status(200).json(result);
     } catch (error) {
-        console.error('get all fines error:', error);
+        logger.error('get all fines error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

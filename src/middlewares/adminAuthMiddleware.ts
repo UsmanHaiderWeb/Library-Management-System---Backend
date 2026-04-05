@@ -5,6 +5,7 @@ import { adminJwtPayload } from "../helpers/interfaces";
 import { prisma } from "../helpers/prismaDb";
 import { redisClient } from "../helpers/redisClient";
 import { Admin } from "@prisma/client";
+import logger from '../helpers/logger';
 
 export const adminAuthMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -80,7 +81,7 @@ export const adminAuthMiddleware = async (req: Request, res: Response, next: Nex
 
         next()
     } catch (error) {
-        console.error('get admin details middleware error:', error);
+        logger.error('get admin details middleware error:', error);
         res.status(500).json({ message: 'Server error' });
         return;
     }

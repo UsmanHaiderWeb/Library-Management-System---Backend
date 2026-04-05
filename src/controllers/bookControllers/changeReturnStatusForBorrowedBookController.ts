@@ -3,6 +3,7 @@ import { RequestWithAdmin } from "../../helpers/interfaces";
 import { prisma } from "../../helpers/prismaDb";
 import { redisClient } from "../../helpers/redisClient";
 import { FineService } from "../../services/fine.service";
+import logger from '../../helpers/logger';
 import { NotificationService } from "../../services/notification.service";
 import { ReservationService } from "../../services/reservation.service";
 
@@ -87,7 +88,7 @@ export const changeReturnStatusForBorrowedBookController = async (req: Request, 
         });
 
     } catch (error) {
-        console.error("return borrowed book controller error:", error);
+        logger.error("return borrowed book controller error:", error);
         res.status(500).json({ message: "Internal Server Error." });
     }
 };

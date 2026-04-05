@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { AdminService } from '../../services/admin.service';
+import logger from '../../helpers/logger';
 
 // Signup controller
 export const adminSignupController = async (req: Request, res: Response): Promise<void> => {
@@ -27,7 +28,7 @@ export const adminSignupController = async (req: Request, res: Response): Promis
             res.status(400).json({ message: error.message });
             return;
         }
-        console.error('Admin Signup error:', error);
+        logger.error('Admin Signup error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

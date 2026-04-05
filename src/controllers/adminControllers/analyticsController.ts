@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { RequestWithAdmin } from "../../helpers/interfaces";
 import { prisma } from "../../helpers/prismaDb";
+import logger from '../../helpers/logger';
 
 export const getAnalyticsController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -241,7 +242,7 @@ export const getAnalyticsController = async (req: Request, res: Response): Promi
             },
         });
     } catch (error) {
-        console.error("get analytics error:", error);
+        logger.error("get analytics error:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 };

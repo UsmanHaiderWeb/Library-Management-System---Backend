@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { RequestWithUser } from '../../helpers/interfaces';
 import { DigitalLibraryService } from '../../services/digital.service';
+import logger from '../../helpers/logger';
 
 /**
  * Access a digital book file (Securely)
@@ -21,7 +22,7 @@ export const getDigitalFileController = async (req: Request, res: Response) => {
             fileUrl
         });
     } catch (error: any) {
-        console.error('digital access error:', error);
+        logger.error('digital access error:', error);
         res.status(error.message.includes('verified') ? 403 : 
                    error.message.includes('not available') ? 404 : 400)
            .json({ message: error.message || 'Server error' });

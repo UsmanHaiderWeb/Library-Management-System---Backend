@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
 import { prisma } from '../../helpers/prismaDb';
+import logger from '../../helpers/logger';
 
 /**
  * Get Notification Preferences
@@ -27,7 +28,7 @@ export const getNotificationPreferencesController = async (req: Request, res: Re
 
         res.status(200).json({ preferences });
     } catch (error) {
-        console.error('Get notification preferences error:', error);
+        logger.error('Get notification preferences error:', error);
         res.status(500).json({ message: 'Server error while fetching notification preferences' });
     }
 };
@@ -71,7 +72,7 @@ export const updateNotificationPreferencesController = async (req: Request, res:
 
         res.status(200).json({ message: 'Preferences updated', preferences });
     } catch (error) {
-        console.error('Update notification preferences error:', error);
+        logger.error('Update notification preferences error:', error);
         res.status(500).json({ message: 'Server error while updating notification preferences' });
     }
 };

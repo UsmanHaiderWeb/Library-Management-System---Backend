@@ -1,4 +1,5 @@
 import { prisma } from '../helpers/prismaDb';
+import logger from '../helpers/logger';
 
 export class NotificationService {
   /**
@@ -15,7 +16,7 @@ export class NotificationService {
         }
       });
     } catch (error) {
-      console.error('Error creating notification:', error);
+      logger.error('Error creating notification:', error);
       // We don't throw here to avoid breaking the main transaction
       return null;
     }

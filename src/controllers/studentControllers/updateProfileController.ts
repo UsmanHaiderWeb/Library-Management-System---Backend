@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
 import { prisma } from '../../helpers/prismaDb';
+import logger from '../../helpers/logger';
 
 export const updateProfileController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -34,7 +35,7 @@ export const updateProfileController = async (req: Request, res: Response): Prom
 
         res.status(200).json({ message: 'Profile updated successfully', user: updatedUser });
     } catch (error) {
-        console.error('Update profile error:', error);
+        logger.error('Update profile error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

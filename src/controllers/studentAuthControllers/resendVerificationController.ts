@@ -4,6 +4,7 @@ import { userJwtPayload } from '../../helpers/interfaces';
 import { prisma } from '../../helpers/prismaDb';
 import { redisClient } from '../../helpers/redisClient';
 import { EmailService } from '../../services/email.service';
+import logger from '../../helpers/logger';
 
 export const resendVerificationCodeController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -75,7 +76,7 @@ export const resendVerificationCodeController = async (req: Request, res: Respon
 
         res.status(200).json({ message: 'Verification code resent successfully' });
     } catch (error) {
-        console.error('Resend verification error:', error);
+        logger.error('Resend verification error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

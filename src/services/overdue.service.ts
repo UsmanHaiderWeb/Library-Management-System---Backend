@@ -1,6 +1,7 @@
 import { prisma } from '../helpers/prismaDb';
 import { NotificationService } from './notification.service';
 import { EmailService } from './email.service';
+import logger from '../helpers/logger';
 
 export class OverdueService {
   /**
@@ -148,19 +149,19 @@ export class OverdueService {
    * Run all reminder checks — called by the cron job
    */
   static async runAllReminders() {
-    console.log(`[${new Date().toISOString()}] Running overdue reminder checks...`);
+    logger.info(`[${new Date().toISOString()}] Running overdue reminder checks...`);
 
     try {
       const dueSoonResult = await this.sendDueSoonReminders();
       const overdueResult = await this.sendOverdueReminders();
 
-      console.log(
+      logger.info(
         `[${new Date().toISOString()}] Reminders sent — Due soon: ${dueSoonResult.count}, Overdue: ${overdueResult.count}`
       );
 
       return { dueSoon: dueSoonResult, overdue: overdueResult };
     } catch (error) {
-      console.error('Error running overdue reminders:', error);
+      logger.error('Error running overdue reminders:', error);
       throw error;
     }
   }

@@ -3,6 +3,7 @@ import { RequestWithAdmin } from '../../helpers/interfaces';
 import { prisma } from '../../helpers/prismaDb';
 import { UserService } from '../../services/user.service';
 import { NotificationService } from '../../services/notification.service';
+import logger from '../../helpers/logger';
 
 export const getAllAccountRequestsController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -19,7 +20,7 @@ export const getAllAccountRequestsController = async (req: Request, res: Respons
 
         res.status(200).json(result);
     } catch (error) {
-        console.error('get account requests error:', error);
+        logger.error('get account requests error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -56,7 +57,7 @@ export const approveAccountController = async (req: Request, res: Response): Pro
 
         res.status(200).json({ message: 'Account approved successfully' });
     } catch (error) {
-        console.error('approve account error:', error);
+        logger.error('approve account error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -87,7 +88,7 @@ export const denyAccountController = async (req: Request, res: Response): Promis
 
         res.status(200).json({ message: 'Account denied and removed successfully' });
     } catch (error) {
-        console.error('deny account error:', error);
+        logger.error('deny account error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -111,7 +112,7 @@ export const getAdminUserDetailsController = async (req: Request, res: Response)
 
         res.status(200).json(result);
     } catch (error) {
-        console.error('get user details error:', error);
+        logger.error('get user details error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

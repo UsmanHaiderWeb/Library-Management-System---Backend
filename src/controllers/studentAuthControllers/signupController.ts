@@ -5,6 +5,7 @@ import { validationResult } from 'express-validator';
 import { prisma } from '../../helpers/prismaDb';
 import { redisClient } from '../../helpers/redisClient';
 import { EmailService } from '../../services/email.service';
+import logger from '../../helpers/logger';
 
 interface signupBody {
     email: string,
@@ -118,7 +119,7 @@ export const signupController = async (req: Request, res: Response): Promise<voi
 
         return;
     } catch (error) {
-        console.error('Signup error:', error);
+        logger.error('Signup error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

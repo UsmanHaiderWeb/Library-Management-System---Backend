@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { RequestWithAdmin } from '../../helpers/interfaces';
 import { UserService } from '../../services/user.service';
 import { UserRole } from '@prisma/client';
+import logger from '../../helpers/logger';
 
 export const getAllUsersController = async (req: Request, res: Response) => {
     try {
@@ -20,7 +21,7 @@ export const getAllUsersController = async (req: Request, res: Response) => {
 
         res.json(result);
     } catch (error) {
-        console.error('get all users error:', error);
+        logger.error('get all users error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

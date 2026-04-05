@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
 import { prisma } from '../../helpers/prismaDb';
+import logger from '../../helpers/logger';
 
 /**
  * Add or Update Review
@@ -47,7 +48,7 @@ export const addReviewController = async (req: Request, res: Response): Promise<
             res.status(201).json({ message: 'Review added successfully', review: newReview });
         }
     } catch (error) {
-        console.error('Add review error:', error);
+        logger.error('Add review error:', error);
         res.status(500).json({ message: 'Server error while submitting review' });
     }
 };
@@ -85,7 +86,7 @@ export const getMyReviewsController = async (req: Request, res: Response): Promi
             totalReviews: reviews.length
         });
     } catch (error) {
-        console.error('Get my reviews error:', error);
+        logger.error('Get my reviews error:', error);
         res.status(500).json({ message: 'Server error while fetching your reviews' });
     }
 };
@@ -115,7 +116,7 @@ export const deleteReviewController = async (req: Request, res: Response): Promi
         await prisma.review.delete({ where: { id: reviewId } });
         res.status(200).json({ message: 'Review deleted successfully' });
     } catch (error) {
-        console.error('Delete review error:', error);
+        logger.error('Delete review error:', error);
         res.status(500).json({ message: 'Server error while deleting review' });
     }
 };
@@ -156,7 +157,7 @@ export const getBookReviewsController = async (req: Request, res: Response): Pro
             averageRating: Number(avgRating.toFixed(1))
         });
     } catch (error) {
-        console.error('Get book reviews error:', error);
+        logger.error('Get book reviews error:', error);
         res.status(500).json({ message: 'Server error while fetching reviews' });
     }
 };

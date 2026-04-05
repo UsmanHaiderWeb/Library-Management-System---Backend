@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { config } from '../config';
+import logger from '../helpers/logger';
 
 export class EmailService {
     private static transporter = nodemailer.createTransport({
@@ -17,7 +18,7 @@ export class EmailService {
      */
     static async sendEmail(to: string, subject: string, html: string) {
         if (!config.EMAIL_USER || !config.EMAIL_PASS) {
-            console.warn('Email credentials not set. Skipping email send.');
+            logger.warn('Email credentials not set. Skipping email send.');
             return;
         }
 
@@ -29,7 +30,7 @@ export class EmailService {
                 html,
             });
         } catch (error) {
-            console.error('Email send error:', error);
+            logger.error('Email send error:', error);
         }
     }
 

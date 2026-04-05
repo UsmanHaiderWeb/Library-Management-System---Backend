@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { RequestWithAdmin } from "../../helpers/interfaces";
 import { BorrowService } from "../../services/borrow.service";
+import logger from '../../helpers/logger';
 
 export const changeStatusForBorrowBookRequestController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -32,7 +33,7 @@ export const changeStatusForBorrowBookRequestController = async (req: Request, r
             borrowedBook
         });
     } catch (error: any) {
-        console.error("accept borrow book request controller error:", error);
+        logger.error("accept borrow book request controller error:", error);
         res.status(error.message.includes('not found') ? 404 : 400).json({ message: error.message || "Internal Server Error." });
     }
 };

@@ -5,6 +5,7 @@ import { userJwtPayload } from "../helpers/interfaces";
 import { prisma } from "../helpers/prismaDb";
 import { redisClient } from "../helpers/redisClient";
 import { College, User } from "@prisma/client";
+import logger from '../helpers/logger';
 
 export const studentAuthMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -79,7 +80,7 @@ export const studentAuthMiddleware = async (req: Request, res: Response, next: N
                 isEmailVerified: user?.isEmailVerified,
             };
 
-            console.log("dataToBeStored: ", dataToBeStored);
+            logger.info("dataToBeStored: ", dataToBeStored);
             
             await redisClient.hset(`user:${user?.id}:data`, dataToBeStored);
             await redisClient.expire(`user:${user?.id}:data`, 60 * 60 * 24 * 7);
@@ -87,12 +88,12 @@ export const studentAuthMiddleware = async (req: Request, res: Response, next: N
         
         
         // pass user to the request object
-        console.log("user?.id ? user : dataToBeStored", user?.id ? user : `dataToBeStored${dataToBeStored}`);
+        logger.info("user?.id ? user : dataToBeStored", user?.id ? user : `dataToBeStored${dataToBeStored}`);
         (req as any).user = user?.id ? user : dataToBeStored;
 
         next()
     } catch (error) {
-        console.error('get user details middleware error:', error);
+        logger.error('get user details middleware error:', error);
         res.status(500).json({ message: 'Server error' });
         return;
     }

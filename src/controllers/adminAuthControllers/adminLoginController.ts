@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { AdminService } from '../../services/admin.service';
+import logger from '../../helpers/logger';
 
 // Login controller
 export const adminLoginController = async (req: Request, res: Response): Promise<void> => {
@@ -26,7 +27,7 @@ export const adminLoginController = async (req: Request, res: Response): Promise
             res.status(400).json({ message: error.message });
             return;
         }
-        console.error('Admin Login error:', error);
+        logger.error('Admin Login error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

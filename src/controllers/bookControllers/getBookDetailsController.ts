@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { BookService } from "../../services/book.service";
+import logger from '../../helpers/logger';
 
 export const getBookDetailsController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -20,7 +21,7 @@ export const getBookDetailsController = async (req: Request, res: Response): Pro
 
         res.status(200).json({ book });
     } catch (error) {
-        console.error("Error in getBookDetailsController:", error);
+        logger.error("Error in getBookDetailsController:", error);
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 };

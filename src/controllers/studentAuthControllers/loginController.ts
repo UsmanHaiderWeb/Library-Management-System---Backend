@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
 import { prisma } from '../../helpers/prismaDb';
 import { redisClient } from '../../helpers/redisClient';
+import logger from '../../helpers/logger';
 
 // Login controller
 export const loginController = async (req: Request, res: Response): Promise<void> => {
@@ -91,7 +92,7 @@ export const loginController = async (req: Request, res: Response): Promise<void
             token,
         });
     } catch (error) {
-        console.error('Login error:', error);
+        logger.error('Login error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 }; 

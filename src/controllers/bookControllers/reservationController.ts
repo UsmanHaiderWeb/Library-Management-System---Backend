@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { RequestWithUser } from '../../helpers/interfaces';
 import { ReservationService } from '../../services/reservation.service';
+import logger from '../../helpers/logger';
 
 export const joinWaitlistController = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -44,7 +45,7 @@ export const getMyReservationsController = async (req: Request, res: Response): 
 
         res.status(200).json({ reservations });
     } catch (error) {
-        console.error('get reservations error:', error);
+        logger.error('get reservations error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -58,7 +59,7 @@ export const getWaitlistPositionController = async (req: Request, res: Response)
 
         res.status(200).json({ position });
     } catch (error) {
-        console.error('get waitlist position error:', error);
+        logger.error('get waitlist position error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

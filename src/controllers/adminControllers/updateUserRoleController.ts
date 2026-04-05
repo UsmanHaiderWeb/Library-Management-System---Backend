@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { RequestWithAdmin } from '../../helpers/interfaces';
 import { UserService } from '../../services/user.service';
 import { UserRole } from '@prisma/client';
+import logger from '../../helpers/logger';
 
 /**
  * Update a student's role (Admin only)
@@ -27,7 +28,7 @@ export const updateUserRoleController = async (req: Request, res: Response) => {
             }
         });
     } catch (error: any) {
-        console.error('update user role error:', error);
+        logger.error('update user role error:', error);
         res.status(error.message === 'User not found' ? 404 : 500)
            .json({ message: error.message || 'Server error' });
     }
