@@ -11,6 +11,8 @@ import './src/helpers/redisClient';
 import { globalErrorHandler } from './src/middlewares/errorHandler';
 import { apiRateLimiter } from './src/middlewares/rateLimiter';
 import { auditMiddleware } from './src/middlewares/auditMiddleware';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './src/swagger';
 
 
 // Load environment variables
@@ -35,9 +37,15 @@ app.use(session({
 }));
 
 
+// API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'GICCL Library API Docs',
+}));
+
 // Basic route
 app.get('/', (_, res) => {
-    res.json({ message: 'Welcome to the LMS Backend API' });
+    res.json({ message: 'Welcome to the LMS Backend API', docs: '/api-docs' });
     return;
 });
 
