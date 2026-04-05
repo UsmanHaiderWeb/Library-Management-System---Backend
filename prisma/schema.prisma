@@ -23,6 +23,7 @@ model College {
 model Book {
   id               String             @id @default(uuid())
   bookNumber       String             @db.Text
+  isbn             String?            @db.VarChar(20)
   bookName         String             @db.Text
   summary          String             @db.LongText
   author           String             @db.VarChar(50)

@@ -36,6 +36,7 @@ export class BookService {
         if (searchQuery.trim() !== '') {
             whereClause.OR = [
                 { bookNumber: { contains: searchQuery } },
+                { isbn: { contains: searchQuery } },
                 { bookName: { contains: searchQuery } },
                 { genre: { contains: searchQuery } },
                 { author: { contains: searchQuery } },
@@ -74,6 +75,7 @@ export class BookService {
             select: {
                 id: true,
                 bookNumber: true,
+                isbn: true,
                 bookName: true,
                 author: true,
                 createdAt: true,
@@ -117,6 +119,7 @@ export class BookService {
             select: {
                 id: true,
                 bookNumber: true,
+                isbn: true,
                 bookName: true,
                 summary: true,
                 author: true,

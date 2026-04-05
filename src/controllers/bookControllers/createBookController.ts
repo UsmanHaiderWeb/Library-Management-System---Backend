@@ -15,6 +15,7 @@ export const createBookController = async (req: Request, res: Response): Promise
 
     const {
         bookNumber,
+        isbn,
         bookName,
         summary,
         author,
@@ -47,6 +48,7 @@ export const createBookController = async (req: Request, res: Response): Promise
         const book = await prisma.book.create({
             data: {
                 bookNumber,
+                isbn: isbn || null,
                 bookName,
                 summary,
                 author,

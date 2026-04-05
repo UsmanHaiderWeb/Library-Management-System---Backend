@@ -14,6 +14,7 @@ export const updateBookController = async (req: Request, res: Response): Promise
 
     const {
         bookNumber,
+        isbn,
         bookName,
         summary,
         author,
@@ -57,6 +58,7 @@ export const updateBookController = async (req: Request, res: Response): Promise
 
         let updateData: any = {
             bookNumber,
+            isbn: isbn || null,
             bookName,
             summary,
             author,
