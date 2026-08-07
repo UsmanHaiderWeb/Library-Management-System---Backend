@@ -84,6 +84,7 @@ export class BookService {
                 almirahNumber: true,
                 shelfNumber: true,
                 image: true,
+                bgColor: true,
                 totalBooks: true,
                 isOnline: true,
                 _count: {
