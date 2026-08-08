@@ -259,16 +259,27 @@ model Notification {
 }
 
 model Fine {
-  id             String   @id @default(uuid())
+  id             String     @id @default(uuid())
   userId         String
   borrowedBookId String
   amount         Int
   daysOverdue    Int
-  createdAt      DateTime @default(now())
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status         FineStatus @default(PENDING)
+  paidAt         DateTime?
+  recordedById   String?    @db.VarChar(100)
+  note           String?    @db.VarChar(255)
+  createdAt      DateTime   @default(now())
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   borrowedBook   BorrowedBook @relation(fields: [borrowedBookId], references: [id], onDelete: Cascade)
 
   @@index([userId, borrowedBookId])
+  @@index([status])
+}
+
+enum FineStatus {
+  PENDING
+  PAID
+  WAIVED
 }
 
 model RenewalRequest {

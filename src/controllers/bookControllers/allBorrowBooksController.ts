@@ -48,7 +48,7 @@ export const allBorrowBooksController = async (req: Request, res: Response) => {
             where: whereClause
         });
         if (!totalBorrowedBooksCount) {
-            res.status(201).json({ requests: [], totalPages: 0 })
+            res.status(200).json({ borrowedBooks: [], totalPages: 0 })
             return;
         }
 

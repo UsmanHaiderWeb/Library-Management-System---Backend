@@ -43,10 +43,10 @@ export class FineService {
     }
 
     /**
-     * Get fine history for a user
+     * Get fine history for a user (flattened for the Student portal)
      */
     static async getUserFines(userId: string) {
-        return prisma.fine.findMany({
+        const fines = await prisma.fine.findMany({
             where: { userId },
             include: {
                 borrowedBook: {
@@ -62,6 +62,80 @@ export class FineService {
                 },
             },
             orderBy: { createdAt: 'desc' },
+        });
+
+        return fines.map((fine) => ({
+            id: fine.id,
+            bookName: fine.borrowedBook.bookCopy.book.bookName,
+            author: fine.borrowedBook.bookCopy.book.author,
+            amount: fine.amount,
+            daysOverdue: fine.daysOverdue,
+            status: fine.status,
+            paidAt: fine.paidAt,
+            createdAt: fine.createdAt,
+        }));
+    }
+
+    /**
+     * Record an offline fine payment (cash at the library desk) or a waiver.
+     * Decrements the user's fine balance inside the same transaction.
+     */
+    static async recordPayment(
+        fineId: string,
+        collegeId: string,
+        adminId: string,
+        outcome: 'PAID' | 'WAIVED',
+        note?: string,
+    ) {
+        return prisma.$transaction(async (tx) => {
+            const fine = await tx.fine.findUnique({
+                where: { id: fineId },
+                include: {
+                    borrowedBook: {
+                        include: {
+                            bookCopy: {
+                                include: { book: { select: { bookName: true } } },
+                            },
+                        },
+                    },
+                    user: { select: { id: true, name: true, fineBalance: true } },
+                },
+            });
+
+            if (!fine) {
+                throw new Error('FINE_NOT_FOUND');
+            }
+            if (fine.borrowedBook.collegeId !== collegeId) {
+                throw new Error('FINE_NOT_FOUND');
+            }
+            if (fine.status !== 'PENDING') {
+                throw new Error('FINE_ALREADY_SETTLED');
+            }
+
+            const updated = await tx.fine.update({
+                where: { id: fineId },
+                data: {
+                    status: outcome,
+                    paidAt: new Date(),
+                    recordedById: adminId,
+                    note: note || null,
+                },
+            });
+
+            // Never let the balance go below zero (legacy fines may predate per-fine tracking)
+            const decrement = Math.min(fine.amount, fine.user.fineBalance);
+            if (decrement > 0) {
+                await tx.user.update({
+                    where: { id: fine.userId },
+                    data: { fineBalance: { decrement } },
+                });
+            }
+
+            return {
+                fine: updated,
+                userId: fine.userId,
+                bookName: fine.borrowedBook.bookCopy.book.bookName,
+            };
         });
     }
 
@@ -96,7 +170,20 @@ export class FineService {
         ]);
 
         return {
-            fines,
+            fines: fines.map((fine) => ({
+                id: fine.id,
+                studentName: fine.user.name,
+                studentId: fine.user.studentId,
+                email: fine.user.email,
+                bookName: fine.borrowedBook.bookCopy.book.bookName,
+                bookNumber: fine.borrowedBook.bookCopy.book.bookNumber,
+                amount: fine.amount,
+                daysOverdue: fine.daysOverdue,
+                status: fine.status,
+                paidAt: fine.paidAt,
+                note: fine.note,
+                createdAt: fine.createdAt,
+            })),
             totalPages: Math.ceil(total / pageSize),
             totalCount: total,
         };

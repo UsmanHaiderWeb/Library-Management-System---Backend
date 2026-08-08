@@ -133,6 +133,13 @@ export class BookService {
                 isOnline: true,
                 onlineFileUrl: true,
                 totalBooks: true,
+                createdAt: true,
+                copies: {
+                    select: {
+                        id: true,
+                        isBorrowed: true,
+                    },
+                },
                 _count: {
                     select: {
                         copies: {

@@ -1,12 +1,56 @@
 import { prisma } from '../helpers/prismaDb';
 import logger from '../helpers/logger';
 
+/**
+ * Preference-gated notification categories. Maps to the boolean pairs on the
+ * NotificationPreference model (inApp<Category> / email<Category>).
+ * Notifications without a category are transactional and always delivered.
+ */
+export type NotificationCategory =
+  | 'BorrowStatus'
+  | 'DueReminder'
+  | 'Overdue'
+  | 'Reservation'
+  | 'Renewal'
+  | 'Purchase';
+
 export class NotificationService {
   /**
-   * Create a new notification for a user
+   * Check whether a user allows a channel+category combination.
+   * No preference row (or no category) means allowed — defaults are all-on.
    */
-  static async createNotification(userId: string, title: string, message: string) {
+  static async isAllowed(
+    userId: string,
+    channel: 'inApp' | 'email',
+    category?: NotificationCategory,
+  ): Promise<boolean> {
+    if (!category) return true;
     try {
+      const prefs = await prisma.notificationPreference.findUnique({ where: { userId } });
+      if (!prefs) return true;
+      const field = `${channel}${category}` as keyof typeof prefs;
+      return prefs[field] !== false;
+    } catch (error) {
+      logger.error('Error reading notification preferences:', error);
+      return true; // never let a preference lookup block a notification
+    }
+  }
+
+  /**
+   * Create a new notification for a user.
+   * Pass a category to respect the user's in-app notification preferences;
+   * omit it for transactional notifications that must always be delivered.
+   */
+  static async createNotification(
+    userId: string,
+    title: string,
+    message: string,
+    category?: NotificationCategory,
+  ) {
+    try {
+      if (!(await this.isAllowed(userId, 'inApp', category))) {
+        return null;
+      }
       return await prisma.notification.create({
         data: {
           userId,

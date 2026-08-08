@@ -1,7 +1,7 @@
 import { BookService } from '../../src/services/book.service';
 import { prisma } from '../../src/helpers/prismaDb';
 
-jest.mock('../src/helpers/prismaDb', () => ({
+jest.mock('../../src/helpers/prismaDb', () => ({
   prisma: {
     book: {
       findMany: jest.fn(),
@@ -36,10 +36,11 @@ describe('BookService', () => {
       expect(result).toEqual(mockBook);
     });
 
-    it('should throw error if book not found', async () => {
+    it('should return null if book not found', async () => {
       (prisma.book.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await expect(BookService.getBookDetails('college-123', 'invalid')).rejects.toThrow('Book not found');
+      // The controller translates null into a 404 — the service itself does not throw
+      await expect(BookService.getBookDetails('college-123', 'invalid')).resolves.toBeNull();
     });
   });
 });

@@ -104,7 +104,8 @@ export class BorrowService {
     await NotificationService.createNotification(
       request.userId,
       'Borrow Request Rejected',
-      `Your request for "${request.book.bookName}" has been rejected by the librarian.`
+      `Your request for "${request.book.bookName}" has been rejected by the librarian.`,
+      'BorrowStatus'
     );
 
     return request;
@@ -177,7 +178,8 @@ export class BorrowService {
       await NotificationService.createNotification(
         borrowRequest.userId,
         'Borrow Request Accepted',
-        `Your request for "${book?.bookName}" has been accepted. Please collect it from the library. Due date: ${dueDate.toLocaleDateString()}.`
+        `Your request for "${book?.bookName}" has been accepted. Please collect it from the library. Due date: ${dueDate.toLocaleDateString()}.`,
+        'BorrowStatus'
       );
 
       return borrowedBook;

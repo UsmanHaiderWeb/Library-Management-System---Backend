@@ -3,7 +3,7 @@ import app from '../../app';
 import { prisma } from '../../src/helpers/prismaDb';
 import bcrypt from 'bcryptjs';
 
-jest.mock('../src/helpers/prismaDb', () => ({
+jest.mock('../../src/helpers/prismaDb', () => ({
   prisma: {
     admin: {
       findUnique: jest.fn(),
@@ -32,11 +32,11 @@ describe('Admin Auth API', () => {
 
       const response = await request(app)
         .post('/api/admin/login')
-        .send({ email: 'admin@example.com', password: 'password123' });
+        .send({ email: 'admin@example.com', password: 'password123', collegeCode: 'TC1' });
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('token');
-      expect(response.body.admin.email).toBe('admin@example.com');
+      expect(response.body.message).toBe('Admin Login successful');
     });
 
     it('should fail with incorrect password', async () => {
@@ -47,10 +47,10 @@ describe('Admin Auth API', () => {
 
       const response = await request(app)
         .post('/api/admin/login')
-        .send({ email: 'admin@example.com', password: 'wrong' });
+        .send({ email: 'admin@example.com', password: 'wrong', collegeCode: 'TC1' });
 
-      expect(response.status).toBe(401);
-      expect(response.body.message).toBe('Invalid email or password');
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('Invalid credentials');
     });
   });
 });

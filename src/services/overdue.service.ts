@@ -68,14 +68,19 @@ export class OverdueService {
       const userName = borrowedBook.user.name;
       const userEmail = borrowedBook.user.email;
 
-      // Send in-app notification
+      // Send in-app notification (respects user preferences)
       await NotificationService.createNotification(
         borrowedBook.userId,
         'Book Due Soon',
-        `"${bookName}" is due on ${dueDate}. Please return it on time to avoid fines.`
+        `"${bookName}" is due on ${dueDate}. Please return it on time to avoid fines.`,
+        'DueReminder'
       );
 
-      // Send email reminder
+      // Send email reminder (respects user preferences)
+      if (!(await NotificationService.isAllowed(borrowedBook.userId, 'email', 'DueReminder'))) {
+        sent++;
+        continue;
+      }
       await EmailService.sendEmail(
         userEmail,
         'LMS - Book Due Soon',
@@ -118,14 +123,19 @@ export class OverdueService {
         : 0;
       const estimatedFine = daysOverdue * 10;
 
-      // Send in-app notification
+      // Send in-app notification (respects user preferences)
       await NotificationService.createNotification(
         borrowedBook.userId,
         'Overdue Book',
-        `"${bookName}" was due on ${dueDate} and is ${daysOverdue} day(s) overdue. Current estimated fine: ₹${estimatedFine}. Please return it immediately.`
+        `"${bookName}" was due on ${dueDate} and is ${daysOverdue} day(s) overdue. Current estimated fine: ₹${estimatedFine}. Please return it immediately.`,
+        'Overdue'
       );
 
-      // Send email reminder
+      // Send email reminder (respects user preferences)
+      if (!(await NotificationService.isAllowed(borrowedBook.userId, 'email', 'Overdue'))) {
+        sent++;
+        continue;
+      }
       await EmailService.sendEmail(
         userEmail,
         'LMS - Overdue Book Notice',

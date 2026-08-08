@@ -81,7 +81,8 @@ export class RenewalService {
         await NotificationService.createNotification(
             request.userId,
             'Renewal Approved',
-            `Your renewal request for "${request.borrowedBook.bookCopy.book.bookName}" has been approved. New due date: ${request.newDueDate.toLocaleDateString()}.`
+            `Your renewal request for "${request.borrowedBook.bookCopy.book.bookName}" has been approved. New due date: ${request.newDueDate.toLocaleDateString()}.`,
+            'Renewal'
         );
 
         return request;
@@ -111,7 +112,8 @@ export class RenewalService {
         await NotificationService.createNotification(
             request.userId,
             'Renewal Rejected',
-            `Your renewal request for "${request.borrowedBook.bookCopy.book.bookName}" has been rejected. Please return the book by the original due date.`
+            `Your renewal request for "${request.borrowedBook.bookCopy.book.bookName}" has been rejected. Please return the book by the original due date.`,
+            'Renewal'
         );
 
         return request;
@@ -126,7 +128,7 @@ export class RenewalService {
         };
         if (status) whereClause.status = status;
 
-        return prisma.renewalRequest.findMany({
+        const requests = await prisma.renewalRequest.findMany({
             where: whereClause,
             include: {
                 user: { select: { id: true, name: true, studentId: true } },
@@ -142,6 +144,19 @@ export class RenewalService {
             },
             orderBy: { requestedOn: 'desc' },
         });
+
+        // Flattened for the Admin portal table
+        return requests.map((request) => ({
+            id: request.id,
+            studentName: request.user.name,
+            studentId: request.user.studentId,
+            bookName: request.borrowedBook.bookCopy.book.bookName,
+            bookNumber: request.borrowedBook.bookCopy.book.bookNumber,
+            requestedOn: request.requestedOn,
+            currentDueDate: request.borrowedBook.dueDate,
+            newDueDate: request.newDueDate,
+            status: request.status,
+        }));
     }
 
     /**

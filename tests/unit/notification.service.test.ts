@@ -9,10 +9,14 @@ jest.mock('../../src/helpers/prismaDb', () => ({
       count: jest.fn(),
       updateMany: jest.fn(),
     },
+    notificationPreference: {
+      findUnique: jest.fn(),
+    },
   },
 }));
 
 jest.mock('../../src/helpers/logger', () => ({
+  __esModule: true,
   default: { error: jest.fn(), info: jest.fn(), warn: jest.fn() },
 }));
 
@@ -131,6 +135,52 @@ describe('NotificationService', () => {
         where: { userId: 'user-1', isRead: false },
         data: { isRead: true },
       });
+    });
+  });
+
+  describe('preference gating', () => {
+    it('should allow everything when the user has no preference row', async () => {
+      (prisma.notificationPreference.findUnique as jest.Mock).mockResolvedValue(null);
+
+      expect(await NotificationService.isAllowed('user-1', 'inApp', 'Overdue')).toBe(true);
+      expect(await NotificationService.isAllowed('user-1', 'email', 'Renewal')).toBe(true);
+    });
+
+    it('should allow transactional notifications regardless of preferences', async () => {
+      expect(await NotificationService.isAllowed('user-1', 'inApp')).toBe(true);
+      expect(prisma.notificationPreference.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('should block a disabled category on the right channel only', async () => {
+      (prisma.notificationPreference.findUnique as jest.Mock).mockResolvedValue({
+        inAppOverdue: false,
+        emailOverdue: true,
+      });
+
+      expect(await NotificationService.isAllowed('user-1', 'inApp', 'Overdue')).toBe(false);
+      expect(await NotificationService.isAllowed('user-1', 'email', 'Overdue')).toBe(true);
+    });
+
+    it('should skip creating an in-app notification for a disabled category', async () => {
+      (prisma.notificationPreference.findUnique as jest.Mock).mockResolvedValue({
+        inAppDueReminder: false,
+      });
+
+      const result = await NotificationService.createNotification(
+        'user-1',
+        'Book Due Soon',
+        'Reminder',
+        'DueReminder',
+      );
+
+      expect(result).toBeNull();
+      expect(prisma.notification.create).not.toHaveBeenCalled();
+    });
+
+    it('should fail open if the preference lookup throws', async () => {
+      (prisma.notificationPreference.findUnique as jest.Mock).mockRejectedValue(new Error('db down'));
+
+      expect(await NotificationService.isAllowed('user-1', 'inApp', 'Overdue')).toBe(true);
     });
   });
 });

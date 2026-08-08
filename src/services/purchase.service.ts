@@ -20,25 +20,81 @@ export class PurchaseService {
   }
 
   /**
-   * Get all purchase requests for a college
+   * Get all purchase requests for a college (paginated, searchable,
+   * flattened for the Admin portal table)
    */
-  static async getRequests(collegeId: string, status?: PurchaseRequestStatus) {
-    return await prisma.purchaseRequest.findMany({
-      where: {
-        collegeId,
-        status: status || undefined
-      },
-      include: {
-        requestedBy: {
-          select: {
-            name: true,
-            email: true,
-            role: true
+  static async getRequests(
+    collegeId: string,
+    options: { status?: PurchaseRequestStatus; pageNumber?: number; search?: string; pageSize?: number } = {}
+  ) {
+    const { status, pageNumber = 0, search, pageSize = 10 } = options;
+
+    const whereClause = {
+      collegeId,
+      status: status || undefined,
+      ...(search
+        ? {
+            OR: [
+              { bookTitle: { contains: search } },
+              { author: { contains: search } },
+            ],
           }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
+        : {}),
+    };
+
+    const [requests, total] = await Promise.all([
+      prisma.purchaseRequest.findMany({
+        where: whereClause,
+        include: {
+          requestedBy: {
+            select: {
+              name: true,
+              studentId: true,
+              email: true,
+              role: true
+            }
+          }
+        },
+        skip: pageNumber * pageSize,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.purchaseRequest.count({ where: whereClause }),
+    ]);
+
+    return {
+      requests: requests.map((request) => ({
+        id: request.id,
+        bookName: request.bookTitle,
+        author: request.author,
+        reason: request.reason,
+        status: request.status,
+        requestedOn: request.createdAt,
+        user: {
+          name: request.requestedBy.name,
+          studentId: request.requestedBy.studentId,
+          email: request.requestedBy.email,
+          role: request.requestedBy.role,
+        },
+      })),
+      totalPages: Math.ceil(total / pageSize),
+      totalCount: total,
+    };
+  }
+
+  /**
+   * Delete a purchase request (admin, college-scoped)
+   */
+  static async deleteRequest(requestId: string, collegeId: string) {
+    const request = await prisma.purchaseRequest.findUnique({
+      where: { id: requestId }
     });
+
+    if (!request || request.collegeId !== collegeId) {
+      throw new Error('Request not found or access denied');
+    }
+
+    return await prisma.purchaseRequest.delete({ where: { id: requestId } });
   }
 
   /**
@@ -61,7 +117,8 @@ export class PurchaseService {
     await NotificationService.createNotification(
       request.userId,
       `Purchase Request ${status.charAt(0) + status.slice(1).toLowerCase()}`,
-      `Your purchase request for "${request.bookTitle}" has been ${status.toLowerCase()}.`
+      `Your purchase request for "${request.bookTitle}" has been ${status.toLowerCase()}.`,
+      'Purchase'
     );
 
     return updatedRequest;

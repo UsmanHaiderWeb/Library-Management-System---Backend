@@ -33,12 +33,32 @@ export const createPurchaseRequestController = async (req: Request, res: Respons
 export const getAllPurchaseRequestsController = async (req: Request, res: Response) => {
   try {
     const admin = (req as RequestWithAdmin).admin;
-    const { status } = req.query;
+    const { status, page, search } = req.query;
 
-    const requests = await PurchaseService.getRequests(admin.collegeId, status as PurchaseRequestStatus);
-    res.json(requests);
+    const result = await PurchaseService.getRequests(admin.collegeId, {
+      status: status as PurchaseRequestStatus | undefined,
+      pageNumber: parseInt(page as string) || 0,
+      search: (search as string) || undefined,
+    });
+    res.json(result);
   } catch (error: any) {
     res.status(500).json({ message: error.message || 'Server error' });
+  }
+};
+
+/**
+ * Delete a purchase request (Admin)
+ */
+export const deletePurchaseRequestController = async (req: Request, res: Response) => {
+  try {
+    const admin = (req as RequestWithAdmin).admin;
+    const { requestId } = req.params;
+
+    await PurchaseService.deleteRequest(requestId, admin.collegeId);
+    res.json({ message: 'Purchase request deleted successfully' });
+  } catch (error: any) {
+    const notFound = (error.message || '').includes('not found');
+    res.status(notFound ? 404 : 500).json({ message: error.message || 'Server error' });
   }
 };
 

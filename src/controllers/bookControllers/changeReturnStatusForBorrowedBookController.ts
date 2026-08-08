@@ -68,7 +68,8 @@ export const changeReturnStatusForBorrowedBookController = async (req: Request, 
             await NotificationService.createNotification(
                 borrowedBook.userId,
                 'Book Return Successful',
-                `You have successfully returned "${bookCopy?.book.bookName}".${fineAmount > 0 ? ` A fine of ₹${fineAmount} has been applied for late return.` : ''}`
+                `You have successfully returned "${bookCopy?.book.bookName}".${fineAmount > 0 ? ` A fine of ₹${fineAmount} has been applied for late return.` : ''}`,
+                'BorrowStatus'
             );
         });
 

@@ -15,7 +15,7 @@ import { getImageKitAuthenticationTokens } from '../controllers/getImageKitAuthe
 
 import { getDashboardStatsController, getBorrowingTrendsController } from '../controllers/adminControllers/getDashboardStatsController';
 
-import { getAllPurchaseRequestsController, updatePurchaseRequestStatusController } from '../controllers/userControllers/purchaseRequestController';
+import { getAllPurchaseRequestsController, updatePurchaseRequestStatusController, deletePurchaseRequestController } from '../controllers/userControllers/purchaseRequestController';
 
 import { updateUserRoleController } from '../controllers/adminControllers/updateUserRoleController';
 
@@ -25,6 +25,7 @@ import { getAllAccountRequestsController, approveAccountController, denyAccountC
 import { authRateLimiter } from '../middlewares/rateLimiter';
 import { getAnalyticsController } from '../controllers/adminControllers/analyticsController';
 import { getAllRenewalRequestsController, approveRenewalController, rejectRenewalController, getAllFinesController } from '../controllers/bookControllers/renewalController';
+import { recordFinePaymentController } from '../controllers/adminControllers/fineController';
 import { getOverdueSummaryController, triggerOverdueRemindersController } from '../controllers/adminControllers/overdueController';
 import { getAuditLogsController, getAuditFiltersController } from '../controllers/adminControllers/auditController';
 
@@ -57,6 +58,7 @@ adminRouter.get('/getUserDetails/:userId', adminAuthMiddleware, getAdminUserDeta
 // Purchase Requests
 adminRouter.get('/purchase-requests', adminAuthMiddleware, getAllPurchaseRequestsController);
 adminRouter.post('/purchase-requests/:requestId/status', adminAuthMiddleware, updatePurchaseRequestStatusController as RequestHandler);
+adminRouter.delete('/purchase-request/:requestId', adminAuthMiddleware, deletePurchaseRequestController as RequestHandler);
 
 // books related routes
 adminRouter.get('/getAllBooks', adminAuthMiddleware, getAllBooksController);
@@ -74,6 +76,8 @@ adminRouter.post('/renewal-requests/:requestId/reject', adminAuthMiddleware, rej
 
 // Fine routes
 adminRouter.get('/fines', adminAuthMiddleware, getAllFinesController);
+adminRouter.patch('/fines/:fineId/pay', adminAuthMiddleware, recordFinePaymentController as RequestHandler);
+adminRouter.patch('/fines/:fineId/waive', adminAuthMiddleware, recordFinePaymentController as RequestHandler);
 
 // Overdue routes
 adminRouter.get('/overdue-summary', adminAuthMiddleware, getOverdueSummaryController);

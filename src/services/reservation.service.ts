@@ -104,7 +104,8 @@ export class ReservationService {
         await NotificationService.createNotification(
             nextReservation.userId,
             'Book Available!',
-            `"${book.bookName}" is now available. You were next on the waitlist! Please borrow it before someone else does.`
+            `"${book.bookName}" is now available. You were next on the waitlist! Please borrow it before someone else does.`,
+            'Reservation'
         );
     }
 

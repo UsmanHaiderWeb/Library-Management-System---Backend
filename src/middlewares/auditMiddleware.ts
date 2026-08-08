@@ -19,9 +19,13 @@ const ACTION_MAP: Record<string, { action: string; entity: string }> = {
 
   // Purchase requests
   'POST /api/admin/purchase-requests': { action: 'UPDATE_PURCHASE_STATUS', entity: 'PurchaseRequest' },
+  'DELETE /api/admin/purchase-request': { action: 'DELETE_PURCHASE_REQUEST', entity: 'PurchaseRequest' },
 
   // Renewal requests
   'POST /api/admin/renewal-requests': { action: 'PROCESS_RENEWAL', entity: 'RenewalRequest' },
+
+  // Fines (pay/waive share a prefix — the Fine record stores the outcome)
+  'PATCH /api/admin/fines': { action: 'SETTLE_FINE', entity: 'Fine' },
 
   // Book management
   'POST /api/books/create': { action: 'CREATE_BOOK', entity: 'Book' },

@@ -152,7 +152,8 @@ export const getAnalyticsController = async (req: Request, res: Response): Promi
         }
         const topBorrowedBooks = Object.values(bookBorrowCounts)
             .sort((a, b) => b.count - a.count)
-            .slice(0, 10);
+            .slice(0, 10)
+            .map(({ bookId, bookName, author, count }) => ({ bookId, bookName, author, borrowCount: count }));
 
         // 3. Borrowing by month
         const monthMap: Record<string, number> = {};
@@ -196,7 +197,7 @@ export const getAnalyticsController = async (req: Request, res: Response): Promi
         const activeUserIds = topActiveUsersRaw.map((r) => r.userId);
         const activeUsers = await prisma.user.findMany({
             where: { id: { in: activeUserIds } },
-            select: { id: true, name: true, email: true },
+            select: { id: true, name: true, email: true, studentId: true },
         });
         const userMap = new Map(activeUsers.map((u) => [u.id, u]));
         const topActiveUsers = topActiveUsersRaw.map((row) => {
@@ -205,7 +206,8 @@ export const getAnalyticsController = async (req: Request, res: Response): Promi
                 userId: row.userId,
                 name: user?.name ?? "Unknown",
                 email: user?.email ?? "Unknown",
-                activeBorrows: row._count.id,
+                studentId: user?.studentId ?? "",
+                borrowCount: row._count.id,
             };
         });
 
@@ -223,7 +225,7 @@ export const getAnalyticsController = async (req: Request, res: Response): Promi
 
         // 10. Fine stats
         const fineStats = {
-            totalFinesCollected: fineAggregation._sum.fineBalance ?? 0,
+            totalFines: fineAggregation._sum.fineBalance ?? 0,
             usersWithFines,
         };
 

@@ -141,6 +141,7 @@ export class UserService {
                 isVerifiedByAdmin: true,
                 collegeId: true,
                 role: true,
+                fineBalance: true,
             }
         });
         // ... (rest of method)
