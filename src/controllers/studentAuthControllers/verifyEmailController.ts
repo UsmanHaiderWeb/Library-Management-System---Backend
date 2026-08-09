@@ -64,9 +64,11 @@ export const verifyEmailController = async (req: express.Request, res: express.R
         }
 
 
-        await prisma.$transaction(async (prisma) => {
-            // Update user's email verification status
-            await prisma.user.update({
+        // Database writes only — cache updates and the response happen after the
+        // commit so a Redis hiccup can never roll back a verified account (or
+        // fire a second response on an already-answered request).
+        await prisma.$transaction(async (tx) => {
+            await tx.user.update({
                 where: {
                     id: decodedUserData.userId
                 },
@@ -77,37 +79,37 @@ export const verifyEmailController = async (req: express.Request, res: express.R
 
             // Delete the used verification token
             if (verificationCodeDocumentFromRedis.id || (verificationCodeFromDB as VerificationToken).id) {
-                await prisma.verificationToken.delete({
+                await tx.verificationToken.delete({
                     where: {
                         id: verificationCodeDocumentFromRedis.id || (verificationCodeFromDB as VerificationToken).id,
                         userId: decodedUserData.userId
                     }
                 });
             }
+        });
 
+        // create new access token
+        const accessToken = jwt.sign(
+            {
+                userId: decodedUserData.userId,
+                email: decodedUserData.email,
+                collegeCode: decodedUserData.collegeCode,
+            },
+            process.env.JWT_SECRET || 'your-secret-key',
+            { expiresIn: '7d' }
+        );
+
+        try {
             await redisClient.del(`user:${decodedUserData.userId}:code`);
-            
-            
-
-            // create new access token
-            const accessToken = jwt.sign(
-                {
-                    userId: decodedUserData.userId,
-                    email: decodedUserData.email,
-                    collegeCode: decodedUserData.collegeCode,
-                },
-                process.env.JWT_SECRET || 'your-secret-key',
-                { expiresIn: '7d' }
-            );
             await redisClient.set(`user:${decodedUserData.userId}:token`, accessToken);
+        } catch (cacheError) {
+            logger.error('Failed to update verification cache:', cacheError);
+        }
 
-
-
-            res.status(200).json({
-                message: 'Email verified successfully',
-                accessToken
-            });
-        })
+        res.status(200).json({
+            message: 'Email verified successfully',
+            accessToken
+        });
     } catch (error) {
         logger.error('Error in verifyEmailController:', error);
         res.status(500).json({

@@ -142,3 +142,6 @@ global_logs.txt
 
 # Compiled JS alongside TS source (use dist/ for output)
 src/**/*.js
+
+# Winston log files
+logs/

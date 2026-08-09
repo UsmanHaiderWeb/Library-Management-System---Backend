@@ -58,9 +58,15 @@ export const signupController = async (req: Request, res: Response): Promise<voi
             return date.getFullYear();
         };
 
-        await prisma.$transaction(async (prisma) => {
-            // Create user
-            const user = await prisma.user.create({
+        const code = (Math.floor(Math.random() * 900000) + 100000).toString();
+
+        // Only database writes belong inside the transaction. SMTP and Redis are
+        // side effects: an interactive transaction times out after 5s, so a slow
+        // or unreachable mail server used to roll the account back *after* the
+        // success response had already been sent — the student was told signup
+        // worked when no account existed.
+        const { user, verificationTokenId } = await prisma.$transaction(async (tx) => {
+            const createdUser = await tx.user.create({
                 data: {
                     email,
                     password: hashedPassword,
@@ -74,49 +80,50 @@ export const signupController = async (req: Request, res: Response): Promise<voi
                 }
             });
 
-            // Generate JWT token to verify that the user who enters the otp is the actual user
-            const token = jwt.sign(
-                {
-                    userId: user.id,
-                    email: user.email,
-                    collegeCode: college.code
-                },
-                process.env.JWT_SECRET || 'your-secret-key',
-                { expiresIn: '1h' }
-            );
-
-            // generate an otp code and email the code to the user
-            const code = Math.floor(Math.random() * 900000) + 100000 as number;
-
-            // add the code to the database
-            const generatedVerificationCodeDocument = await prisma.verificationToken.create({
+            const verificationToken = await tx.verificationToken.create({
                 data: {
-                    token: code.toString(),
+                    token: code,
                     type: 'EMAIL_VERIFICATION',
-                    userId: user.id,
-                    expiresAt: new Date(Date.now() + (60 * 60 * 2))
+                    userId: createdUser.id,
+                    expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000) // 2 hours
                 }
-            })
-
-            // store the token and code in redis
-            // await redisClient.set(`user:${user.id}:token`, code.toString(), 'EX', 60 * 60 * 2);
-            await redisClient.hset(`user:${user.id}:code`, {
-                code: code.toString(),
-                id: generatedVerificationCodeDocument.id
             });
-            await redisClient.expire(`user:${user.id}:code`, 60 * 60 * 2);
 
-
-            // send the verification email
-            await EmailService.sendVerificationCode(email, code.toString());
-
-            // send the response back to frontend
-            res.status(201).json({
-                message: 'User created successfully. Verification email sent.',
-                temporaryToken: token,
-            });
+            return { user: createdUser, verificationTokenId: verificationToken.id };
         });
 
+        // Token proving the person entering the OTP is the one who signed up
+        const token = jwt.sign(
+            {
+                userId: user.id,
+                email: user.email,
+                collegeCode: college.code
+            },
+            process.env.JWT_SECRET || 'your-secret-key',
+            { expiresIn: '1h' }
+        );
+
+        // Cache for fast OTP lookup; the DB row above is the source of truth,
+        // so a Redis outage must not fail the signup.
+        try {
+            await redisClient.hset(`user:${user.id}:code`, {
+                code,
+                id: verificationTokenId
+            });
+            await redisClient.expire(`user:${user.id}:code`, 60 * 60 * 2);
+        } catch (cacheError) {
+            logger.error('Failed to cache verification code:', cacheError);
+        }
+
+        // Fire-and-forget: a dead mail server must not delay or fail the
+        // response. If it never arrives the student can use "resend code".
+        EmailService.sendVerificationCode(email, code)
+            .catch((emailError) => logger.error('Verification email failed:', emailError));
+
+        res.status(201).json({
+            message: 'User created successfully. Verification email sent.',
+            temporaryToken: token,
+        });
         return;
     } catch (error) {
         logger.error('Signup error:', error);

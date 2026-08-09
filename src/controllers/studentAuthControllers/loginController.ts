@@ -63,7 +63,7 @@ export const loginController = async (req: Request, res: Response): Promise<void
                     token: code.toString(),
                     type: 'EMAIL_VERIFICATION',
                     userId: user.id,
-                    expiresAt: new Date(Date.now() + (60 * 60 * 2))
+                    expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000) // 2 hours
                 }
             })
 

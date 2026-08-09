@@ -63,18 +63,11 @@ function matchAction(method: string, path: string): { action: string; entity: st
 
 /**
  * Audit logging middleware for admin write operations.
- * Place AFTER adminAuthMiddleware so req.admin is available.
- * Only logs non-GET requests (mutations).
+ * Mounted globally in app.ts (before the routers) and only logs non-GET requests.
  */
 export const auditMiddleware = (req: Request, res: Response, next: NextFunction) => {
   // Only audit mutations
   if (req.method === 'GET') {
-    next();
-    return;
-  }
-
-  const admin = (req as unknown as Record<string, unknown>).admin as { id: string; name?: string } | undefined;
-  if (!admin?.id) {
     next();
     return;
   }
@@ -85,11 +78,15 @@ export const auditMiddleware = (req: Request, res: Response, next: NextFunction)
     return;
   }
 
-  // Log after the response is sent (non-blocking)
+  // Log after the response is sent (non-blocking).
+  // req.admin is resolved HERE rather than above: this middleware is mounted
+  // globally, but adminAuthMiddleware runs per-route, so req.admin does not
+  // exist yet on the way in — only by the time the route responds.
   const originalJson = res.json.bind(res);
   res.json = function (body: unknown) {
-    // Only log successful operations (2xx status)
-    if (res.statusCode >= 200 && res.statusCode < 300) {
+    const admin = (req as unknown as Record<string, unknown>).admin as { id: string; name?: string } | undefined;
+    // Only log successful operations (2xx) performed by an authenticated admin
+    if (admin?.id && res.statusCode >= 200 && res.statusCode < 300) {
       AuditService.log({
         adminId: admin.id,
         action: matched.action,

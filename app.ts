@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
 import { studentRouter } from './src/routes/studentRoutes';
@@ -11,6 +10,7 @@ import './src/helpers/redisClient';
 import { globalErrorHandler } from './src/middlewares/errorHandler';
 import { apiRateLimiter } from './src/middlewares/rateLimiter';
 import { auditMiddleware } from './src/middlewares/auditMiddleware';
+import { requestIdMiddleware, requestLogger } from './src/middlewares/requestLogger';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './src/swagger';
 
@@ -26,7 +26,8 @@ app.use(cors({
     origin: ['http://localhost:3000', 'http://localhost:5173'],
     credentials: true
 }));
-app.use(morgan('dev'));
+app.use(requestIdMiddleware);
+app.use(requestLogger);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }))
 app.use(express.static(path?.join(__dirname, 'public')));

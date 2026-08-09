@@ -41,6 +41,12 @@ export const changeReturnStatusForBorrowedBookController = async (req: Request, 
         const returnedOn = new Date();
         const fineAmount = FineService.calculateFine(borrowedBook.dueDate, returnedOn);
 
+        // Only the atomic state changes belong in here. Cache invalidation and
+        // notifications used to run inside this transaction, and the
+        // notification service issues queries on its own Prisma client — so it
+        // competed for a connection while this transaction held one and pushed
+        // the whole thing past Prisma's 5s interactive-transaction limit,
+        // failing the return with a 500 and rolling back the fine.
         await prisma.$transaction(async (tx) => {
             await tx.borrowedBook.update({
                 where: { id: borrowedBook.id },
@@ -59,27 +65,30 @@ export const changeReturnStatusForBorrowedBookController = async (req: Request, 
                 const daysOverdue = Math.ceil((returnedOn.getTime() - borrowedBook.dueDate!.getTime()) / (1000 * 3600 * 24));
                 await FineService.applyFine(borrowedBook.userId, fineAmount, borrowedBook.id, daysOverdue, tx);
             }
-
-            const redisKey = `user:${borrowedBook.userId}:borrowedBooks`;
-            await redisClient.del(redisKey);
-
-            // Create notification
-            const bookCopy = await tx.bookCopy.findUnique({ where: { id: borrowedBook.bookCopyId }, include: { book: { select: { bookName: true } } } });
-            await NotificationService.createNotification(
-                borrowedBook.userId,
-                'Book Return Successful',
-                `You have successfully returned "${bookCopy?.book.bookName}".${fineAmount > 0 ? ` A fine of ₹${fineAmount} has been applied for late return.` : ''}`,
-                'BorrowStatus'
-            );
         });
+
+        // --- post-commit side effects: none of these may fail the return ---
+        const bookCopy = await prisma.bookCopy.findUnique({
+            where: { id: borrowedBook.bookCopyId },
+            include: { book: { select: { id: true, bookName: true } } },
+        });
+
+        try {
+            await redisClient.del(`user:${borrowedBook.userId}:borrowedBooks`);
+        } catch (cacheError) {
+            logger.error("Failed to invalidate borrowed books cache:", cacheError);
+        }
+
+        await NotificationService.createNotification(
+            borrowedBook.userId,
+            'Book Return Successful',
+            `You have successfully returned "${bookCopy?.book.bookName}".${fineAmount > 0 ? ` A fine of ₹${fineAmount} has been applied for late return.` : ''}`,
+            'BorrowStatus'
+        );
 
         // Notify next person in the reservation queue for this book
-        const bookCopyForReservation = await prisma.bookCopy.findUnique({
-            where: { id: borrowedBook.bookCopyId },
-            select: { bookId: true },
-        });
-        if (bookCopyForReservation) {
-            await ReservationService.notifyNextInQueue(bookCopyForReservation.bookId);
+        if (bookCopy) {
+            await ReservationService.notifyNextInQueue(bookCopy.book.id);
         }
 
         res.status(200).json({

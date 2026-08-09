@@ -25,25 +25,28 @@ export const adminAuthMiddleware = async (req: Request, res: Response, next: Nex
         }
 
 
-        // find college
-        let college;
-        college = await redisClient.hgetall(`college:${decodedToken?.collegeCode}`);
-        if (!college.id || !college?.code || (college?.code != decodedToken?.collegeCode) || (decodedToken?.collegeCode != college.code)) {
-            college = await prisma.college.findUnique({
-                where: {
-                    code: decodedToken?.collegeCode
-                }
-            })
-            if (!college) {
-                res.status(400).json({ message: "Invalid college code" })
-                return;
-            }
+        const collegeCacheKey = `college:${decodedToken?.collegeCode}`;
 
-            await redisClient.hset(`college:${decodedToken?.collegeCode}`, {
-                id: college?.id,
-                code: college?.code
+        const loadCollegeFromDb = async () => {
+            const fresh = await prisma.college.findUnique({
+                where: { code: decodedToken?.collegeCode }
             });
-            await redisClient.expire(`college:${decodedToken?.collegeCode}`, 60 * 60 * 24 * 7);
+            if (!fresh) return null;
+
+            await redisClient.hset(collegeCacheKey, { id: fresh.id, code: fresh.code });
+            await redisClient.expire(collegeCacheKey, 60 * 60 * 24 * 7);
+            return { id: fresh.id, code: fresh.code };
+        };
+
+        // find college (cached for a week)
+        const cachedCollege = await redisClient.hgetall(collegeCacheKey);
+        let college = cachedCollege?.id && cachedCollege?.code === decodedToken?.collegeCode
+            ? { id: cachedCollege.id, code: cachedCollege.code }
+            : await loadCollegeFromDb();
+
+        if (!college) {
+            res.status(400).json({ message: "Invalid college code" })
+            return;
         }
 
 
@@ -52,13 +55,31 @@ export const adminAuthMiddleware = async (req: Request, res: Response, next: Nex
         let admin;
         admin = await redisClient.hgetall(`admin:${decodedToken?.adminId}:data`) as unknown as Admin;
         if (!admin?.id || !admin?.collegeId) {
-            admin = await prisma.admin.findUnique({
+            const lookup = () => prisma.admin.findUnique({
                 where: {
                     id: decodedToken?.adminId,
                     email: decodedToken?.email,
-                    collegeId: college?.id,
+                    collegeId: college!.id,
                 },
-            })
+            });
+
+            admin = await lookup() as Admin;
+
+            // A cached college id can go stale — e.g. the college row was
+            // re-provisioned or the database restored from a backup. Without
+            // this retry every admin is locked out, with a misleading
+            // "invalid token" message, until the week-long cache expires.
+            if (!admin) {
+                const refreshed = await loadCollegeFromDb();
+                if (refreshed && refreshed.id !== college.id) {
+                    logger.warn('Stale cached college id detected; refreshed from database', {
+                        collegeCode: decodedToken?.collegeCode,
+                    });
+                    college = refreshed;
+                    admin = await lookup() as Admin;
+                }
+            }
+
             if (!admin) {
                 res.status(400).json({ message: "Invalid or expired token." })
                 return;

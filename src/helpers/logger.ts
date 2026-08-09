@@ -16,12 +16,33 @@ const prodFormat = combine(
     json()
 );
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+const transports: winston.transport[] = [new winston.transports.Console()];
+
+// On a college server nobody is watching stdout — persist logs to disk so an
+// incident can be investigated after the fact. Files rotate by size so a busy
+// term can't fill the disk.
+if (isProduction) {
+    transports.push(
+        new winston.transports.File({
+            filename: 'logs/error.log',
+            level: 'error',
+            maxsize: 10 * 1024 * 1024, // 10 MB
+            maxFiles: 5,
+        }),
+        new winston.transports.File({
+            filename: 'logs/combined.log',
+            maxsize: 10 * 1024 * 1024,
+            maxFiles: 5,
+        })
+    );
+}
+
 const logger = winston.createLogger({
-    level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-    format: process.env.NODE_ENV === 'production' ? prodFormat : devFormat,
-    transports: [
-        new winston.transports.Console(),
-    ],
+    level: isProduction ? 'info' : 'debug',
+    format: isProduction ? prodFormat : devFormat,
+    transports,
     // Don't exit on uncaught exceptions
     exitOnError: false,
 });

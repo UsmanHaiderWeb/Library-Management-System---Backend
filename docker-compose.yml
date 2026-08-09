@@ -1,0 +1,45 @@
+# Local/on-prem dependencies for the Library Management System backend.
+#
+#   docker compose up -d          start MySQL + Redis
+#   npm run prisma                push the Prisma schema into the fresh database
+#   npm run dev                   start the API on :3000
+#
+# MYSQL_ROOT_PASSWORD must match the password inside DATABASE_URL in .env,
+# and MYSQL_DATABASE must match the database name there (default: lmsbackend).
+
+services:
+  mysql:
+    image: mysql:lts
+    container_name: lms-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env to match DATABASE_URL}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-lmsbackend}
+    ports:
+      - "3306:3306"
+    volumes:
+      - lms-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: lms-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - lms-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  lms-mysql-data:
+  lms-redis-data:

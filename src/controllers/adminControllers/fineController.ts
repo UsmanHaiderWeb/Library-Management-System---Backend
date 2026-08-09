@@ -10,7 +10,8 @@ export const recordFinePaymentController = async (req: Request, res: Response): 
         const admin = (req as RequestWithAdmin).admin;
         const { fineId } = req.params;
         const outcome = req.path.includes('/waive') ? 'WAIVED' : 'PAID';
-        const { note } = req.body as { note?: string };
+        // Express 5 leaves req.body undefined when no JSON body was sent
+        const { note } = (req.body || {}) as { note?: string };
 
         if (!fineId) {
             res.status(400).json({ message: 'Fine ID is required' });

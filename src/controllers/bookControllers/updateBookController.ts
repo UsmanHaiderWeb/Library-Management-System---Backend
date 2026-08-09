@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
+import { validationResult } from 'express-validator';
 import { RequestWithAdmin } from '../../helpers/interfaces';
 import { prisma } from '../../helpers/prismaDb';
 import logger from '../../helpers/logger';
@@ -10,6 +11,14 @@ export const updateBookController = async (req: Request, res: Response): Promise
 
     if (!admin) {
         res.status(401).json({ message: 'Unauthorized access' });
+        return;
+    }
+
+    // Same as create: the validator middleware runs but its results were never
+    // inspected, so invalid payloads were persisted silently.
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
         return;
     }
 
