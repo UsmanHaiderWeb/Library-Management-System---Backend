@@ -13,6 +13,7 @@ import { auditMiddleware } from './src/middlewares/auditMiddleware';
 import { requestIdMiddleware, requestLogger } from './src/middlewares/requestLogger';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './src/swagger';
+import { corsOrigins } from './src/config';
 
 
 // Load environment variables
@@ -23,7 +24,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://localhost:5173'],
+    origin: corsOrigins,
     credentials: true
 }));
 app.use(requestIdMiddleware);
