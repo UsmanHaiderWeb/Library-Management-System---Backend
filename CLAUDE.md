@@ -33,8 +33,21 @@ Express 5 + TypeScript REST API. MySQL via **Prisma** (`prisma/schema.prisma`, 1
 - Files: ImageKit — server-side avatar upload (multer memory), book covers/PDFs via client tokens from `/imagekit-authentication-tokens`.
 - Borrow limits by role in `borrow.service.ts`: FACULTY 10/30d, STAFF 5/21d, STUDENT 3/14d.
 
-## Tests (`npm test` — 64 tests, all must stay green)
+## Never put side effects inside a Prisma transaction
 
-- Runs **without live MySQL/Redis**: `tests/setup.ts` globally mocks the Redis client (jest hangs on real ioredis otherwise — don't remove that mock).
-- Unit tests mock `../../src/helpers/prismaDb` per-file (mind the double `../`), logger mocks need `__esModule: true`.
-- `tests/integration/adminAuth.test.ts` exercises real Express via supertest; login requires `collegeCode` in the payload.
+Prisma's interactive transactions time out after **5 seconds**, and this codebase has been bitten three separate times: a slow SMTP call inside signup's transaction rolled accounts back *after* replying 201, and notification/Redis work inside the return-book transaction made returns 500 and lose the fine.
+
+Inside `$transaction`: database writes that must be atomic together, using the `tx` client. Outside (after commit): SMTP, Redis, notifications, and **the HTTP response**. `NotificationService` in particular runs on its own Prisma client, so calling it inside a transaction competes for a connection while that transaction holds one.
+
+## Tests
+
+| Command | What | Needs |
+|---------|------|-------|
+| `npm test` | 64 jest tests | nothing — `tests/setup.ts` mocks Redis (jest hangs on real ioredis; don't remove it), unit tests mock `../../src/helpers/prismaDb` per-file (mind the double `../`), logger mocks need `__esModule: true` |
+| `npm run test:api` | 99 checks over all 73 endpoints, end-to-end | a running server + live MySQL/Redis. **Wipes the database** — dev only |
+
+`scripts/api-smoke.js` creates every object through the public API, so it catches contract and transaction bugs unit tests cannot. It marks its three unavoidable direct-DB steps with `[DB]` (college provisioning, reading the emailed OTP, back-dating a due date to simulate time passing). Run it after any change to auth, borrowing, or fines.
+
+## Logging
+
+Requests flow through `requestIdMiddleware` + `requestLogger` (morgan → Winston): correlation id echoed as `X-Request-Id`, the acting admin/user, and severity by status (5xx error, 4xx warn). JSON in production plus rotating `logs/combined.log` and `logs/error.log`; readable one-liners in dev. Never `console.*`.

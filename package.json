@@ -10,7 +10,8 @@
     "prisma": "npx prisma db push",
     "prisma:gen": "npx prisma generate",
     "build": "npx prisma generate && tsc",
-    "test": "jest"
+    "test": "jest",
+    "test:api": "node scripts/api-smoke.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.26.0",
