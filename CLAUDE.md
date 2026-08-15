@@ -79,6 +79,18 @@ retired one: that would silently point an old link at a different book.
 Ids still work everywhere. After deploying this schema run
 `node scripts/backfill-slugs.js` once to slug existing books.
 
+## Deployment
+
+`deploy/` is the whole story — production compose (MySQL, Redis, API, Caddy serving both portals over automatic HTTPS, nightly dumps), Dockerfiles, `bootstrap.sh`, and a README. Read that before improvising one.
+
+Things that broke the first time this was containerised, so don't undo them:
+
+- **Anything `src/` imports at runtime belongs in `dependencies`, not `devDependencies`.** `npm ci --omit=dev` builds the runtime image; `zod` sat in devDependencies and the container died on boot.
+- **`npm run build` ends with `scripts/copy-static.js`.** `app.ts` serves `path.join(__dirname, 'public')` — from `dist/` that is `dist/public`, which `tsc` does not create. Without the copy, `/templates` 404s in every compiled build while working perfectly under ts-node.
+- **`redisClient` passes `config.REDIS_URL`.** `new Redis()` with no argument silently dials 127.0.0.1 forever.
+- The production compose publishes **no** MySQL or Redis ports. `docker-compose.yml` (development) does — that one is for a laptop, never a server.
+- The API is a **single instance** by design: `overdueReminder.job.ts` runs node-cron in-process, so a second replica double-sends every reminder.
+
 ## Logging
 
 Requests flow through `requestIdMiddleware` + `requestLogger` (morgan → Winston): correlation id echoed as `X-Request-Id`, the acting admin/user, and severity by status (5xx error, 4xx warn). JSON in production plus rotating `logs/combined.log` and `logs/error.log`; readable one-liners in dev. Never `console.*`.
