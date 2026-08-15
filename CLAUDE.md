@@ -48,6 +48,18 @@ Inside `$transaction`: database writes that must be atomic together, using the `
 
 `scripts/api-smoke.js` creates every object through the public API, so it catches contract and transaction bugs unit tests cannot. It marks its three unavoidable direct-DB steps with `[DB]` (college provisioning, reading the emailed OTP, back-dating a due date to simulate time passing). Run it after any change to auth, borrowing, or fines.
 
+## Book URLs are slugs
+
+`Book.slug` is derived from the title and unique per college. Renaming a book
+regenerates it and files the old value in `BookSlug`, so links shared before the
+rename still resolve — `getBookDetails` tries current slug, then id, then
+retired slugs, and returns `redirectTo` whenever the caller did not use the
+canonical slug. Never delete `BookSlug` rows, and never let a new slug reuse a
+retired one: that would silently point an old link at a different book.
+
+Ids still work everywhere. After deploying this schema run
+`node scripts/backfill-slugs.js` once to slug existing books.
+
 ## Logging
 
 Requests flow through `requestIdMiddleware` + `requestLogger` (morgan → Winston): correlation id echoed as `X-Request-Id`, the acting admin/user, and severity by status (5xx error, 4xx warn). JSON in production plus rotating `logs/combined.log` and `logs/error.log`; readable one-liners in dev. Never `console.*`.

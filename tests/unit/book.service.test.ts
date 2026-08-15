@@ -6,12 +6,22 @@ jest.mock('../../src/helpers/prismaDb', () => ({
     book: {
       findMany: jest.fn(),
       count: jest.fn(),
-      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+    },
+    bookSlug: {
+      findFirst: jest.fn(),
     },
   },
 }));
 
+const bookFindFirst = prisma.book.findFirst as jest.Mock;
+const slugFindFirst = prisma.bookSlug.findFirst as jest.Mock;
+
 describe('BookService', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('getAllBooks', () => {
     it('should return a list of books with pagination', async () => {
       const mockBooks = [{ id: '1', bookName: 'Book 1' }, { id: '2', bookName: 'Book 2' }];
@@ -27,20 +37,60 @@ describe('BookService', () => {
   });
 
   describe('getBookDetails', () => {
-    it('should return book details if found', async () => {
-      const mockBook = { id: '1', bookName: 'Book 1', copies: [] };
-      (prisma.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
+    const book = { id: 'book-1', slug: 'clean-code', bookName: 'Clean Code', copies: [] };
 
-      const result = await BookService.getBookDetails('college-123', '1');
+    it('returns the book when the current slug is used, with no redirect', async () => {
+      bookFindFirst.mockResolvedValueOnce(book);
 
-      expect(result).toEqual(mockBook);
+      const result = await BookService.getBookDetails('clean-code', 'TC1');
+
+      expect(result).toEqual(book);
+      expect(result).not.toHaveProperty('redirectTo');
+      // Matched on the first try — no id or history lookup needed
+      expect(bookFindFirst).toHaveBeenCalledTimes(1);
+      expect(slugFindFirst).not.toHaveBeenCalled();
     });
 
-    it('should return null if book not found', async () => {
-      (prisma.book.findUnique as jest.Mock).mockResolvedValue(null);
+    it('redirects to the slug when looked up by id', async () => {
+      bookFindFirst
+        .mockResolvedValueOnce(null)   // not a slug
+        .mockResolvedValueOnce(book);  // is an id
+
+      const result = await BookService.getBookDetails('book-1', 'TC1');
+
+      expect(result).toMatchObject({ id: 'book-1', redirectTo: 'clean-code' });
+    });
+
+    it('resolves a retired slug and redirects to the current one', async () => {
+      bookFindFirst
+        .mockResolvedValueOnce(null)   // not the current slug
+        .mockResolvedValueOnce(null);  // not an id
+      slugFindFirst.mockResolvedValueOnce({ bookId: 'book-1' });
+      bookFindFirst.mockResolvedValueOnce({ ...book, slug: 'clean-code-2nd-edition' });
+
+      const result = await BookService.getBookDetails('clean-code', 'TC1');
+
+      expect(result).toMatchObject({ redirectTo: 'clean-code-2nd-edition' });
+    });
+
+    it('returns null when nothing matches', async () => {
+      bookFindFirst.mockResolvedValue(null);
+      slugFindFirst.mockResolvedValue(null);
 
       // The controller translates null into a 404 — the service itself does not throw
-      await expect(BookService.getBookDetails('college-123', 'invalid')).resolves.toBeNull();
+      await expect(BookService.getBookDetails('nope', 'TC1')).resolves.toBeNull();
+    });
+
+    it('falls back to the id when a book somehow has no slug', async () => {
+      bookFindFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      slugFindFirst.mockResolvedValueOnce({ bookId: 'book-1' });
+      bookFindFirst.mockResolvedValueOnce({ ...book, slug: null });
+
+      const result = await BookService.getBookDetails('old-slug', 'TC1');
+
+      expect(result).toMatchObject({ redirectTo: 'book-1' });
     });
   });
 });
