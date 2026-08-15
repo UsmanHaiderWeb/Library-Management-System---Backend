@@ -71,6 +71,7 @@ export const getWishlistController = async (req: Request, res: Response): Promis
                         bookName: true,
                         author: true,
                         image: true,
+                        slug: true,
                         bgColor: true,
                         genre: true,
                     }

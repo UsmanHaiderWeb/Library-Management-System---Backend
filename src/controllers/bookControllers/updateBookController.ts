@@ -4,6 +4,7 @@ import { validationResult } from 'express-validator';
 import { RequestWithAdmin } from '../../helpers/interfaces';
 import { prisma } from '../../helpers/prismaDb';
 import logger from '../../helpers/logger';
+import { generateUniqueSlug, retireSlug } from '../../helpers/slug';
 
 export const updateBookController = async (req: Request, res: Response): Promise<void> => {
     const admin = (req as RequestWithAdmin).admin;
@@ -113,6 +114,19 @@ export const updateBookController = async (req: Request, res: Response): Promise
                     id: { in: unborrowedCopies.map(c => c.id) }
                 }
             });
+        }
+
+        // Retitling changes the URL. Keep the old slug on record so links
+        // already shared or bookmarked still resolve to this book.
+        const titleChanged = bookName && bookName !== existingBook.bookName;
+        if (titleChanged || !existingBook.slug) {
+            const nextSlug = await generateUniqueSlug(bookName, admin.collegeId, bookId);
+            if (nextSlug !== existingBook.slug) {
+                if (existingBook.slug) {
+                    await retireSlug(existingBook.slug, bookId, admin.collegeId);
+                }
+                updateData.slug = nextSlug;
+            }
         }
 
         const updatedBook = await prisma.book.update({

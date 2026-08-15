@@ -75,6 +75,7 @@ export class BookService {
             take: pageSize,
             select: {
                 id: true,
+                slug: true,
                 bookNumber: true,
                 isbn: true,
                 bookName: true,
@@ -108,18 +109,47 @@ export class BookService {
     }
 
     /**
-     * Get specific book details
+     * Look up a book by slug or id.
+     *
+     * Accepts three things, in order: the current slug, a slug the book used to
+     * have (returns `redirectTo` so the client can swap the URL for the current
+     * one), or a raw id — ids stay supported because older links and the admin
+     * portal still use them.
      */
-    static async getBookDetails(bookId: string, collegeCode: string) {
-        return prisma.book.findUnique({
-            where: {
-                id: bookId,
-                College: {
-                    code: collegeCode,
-                },
-            },
-            select: {
+    static async getBookDetails(identifier: string, collegeCode: string) {
+        const bySlug = await prisma.book.findFirst({
+            where: { slug: identifier, College: { code: collegeCode } },
+            select: this.bookDetailSelect,
+        });
+        if (bySlug) return bySlug;
+
+        const byId = await prisma.book.findFirst({
+            where: { id: identifier, College: { code: collegeCode } },
+            select: this.bookDetailSelect,
+        });
+        if (byId) {
+            // Reached by id but the book has a slug — send the client to it
+            return byId.slug ? { ...byId, redirectTo: byId.slug } : byId;
+        }
+
+        // Finally, a slug this book used before it was renamed
+        const retired = await prisma.bookSlug.findFirst({
+            where: { slug: identifier, book: { College: { code: collegeCode } } },
+            select: { bookId: true },
+        });
+        if (!retired) return null;
+
+        const current = await prisma.book.findFirst({
+            where: { id: retired.bookId },
+            select: this.bookDetailSelect,
+        });
+        return current ? { ...current, redirectTo: current.slug ?? current.id } : null;
+    }
+
+    /** Shared projection so every lookup path returns the same shape. */
+    private static bookDetailSelect = {
                 id: true,
+                slug: true,
                 bookNumber: true,
                 isbn: true,
                 bookName: true,
@@ -149,7 +179,5 @@ export class BookService {
                         },
                     },
                 },
-            },
-        });
-    }
+    } as const;
 }

@@ -25,6 +25,10 @@ model Book {
   bookNumber       String             @db.Text
   isbn             String?            @db.VarChar(20)
   bookName         String             @db.Text
+  /// URL slug derived from bookName, unique within a college. Regenerated when
+  /// the title changes; the previous value is kept in BookSlug so old links
+  /// keep working.
+  slug             String?            @db.VarChar(180)
   summary          String             @db.LongText
   author           String             @db.VarChar(50)
   genre            String             @db.LongText
@@ -44,9 +48,26 @@ model Book {
   reviews          Review[]
   savedBooks       SavedBook[]
   reservations     Reservation[]
+  slugHistory      BookSlug[]
 
+  @@unique([collegeId, slug])
   @@index([id, collegeId])
   @@index([collegeId], map: "Book_collegeId_fkey")
+}
+
+/// Every slug a book has ever had, so links shared before a rename still
+/// resolve — the lookup falls back here and the client redirects to the
+/// current URL.
+model BookSlug {
+  id        String   @id @default(uuid())
+  slug      String   @db.VarChar(180)
+  bookId    String
+  collegeId String?
+  createdAt DateTime @default(now())
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([collegeId, slug])
+  @@index([bookId])
 }
 
 model BookCopy {

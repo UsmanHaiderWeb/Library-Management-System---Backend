@@ -4,6 +4,7 @@ import { validationResult } from 'express-validator';
 import { RequestWithAdmin } from '../../helpers/interfaces';
 import { prisma } from '../../helpers/prismaDb';
 import logger from '../../helpers/logger';
+import { generateUniqueSlug } from '../../helpers/slug';
 
 
 export const createBookController = async (req: Request, res: Response): Promise<void> => {
@@ -54,11 +55,15 @@ export const createBookController = async (req: Request, res: Response): Promise
     }
 
     try {
+        // Slug is derived here so every book has a stable, readable URL
+        const slug = await generateUniqueSlug(bookName, admin.collegeId);
+
         const book = await prisma.book.create({
             data: {
                 bookNumber,
                 isbn: isbn || null,
                 bookName,
+                slug,
                 summary,
                 author,
                 genre,

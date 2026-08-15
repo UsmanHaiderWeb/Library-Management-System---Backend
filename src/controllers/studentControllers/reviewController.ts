@@ -74,6 +74,7 @@ export const getMyReviewsController = async (req: Request, res: Response): Promi
                         bookName: true,
                         author: true,
                         image: true,
+                        slug: true,
                         bgColor: true,
                     }
                 }
