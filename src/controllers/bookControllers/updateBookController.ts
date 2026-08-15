@@ -69,7 +69,6 @@ export const updateBookController = async (req: Request, res: Response): Promise
 
         const updateData: any = {
             bookNumber,
-            isbn: isbn || null,
             bookName,
             summary,
             author,
@@ -82,6 +81,13 @@ export const updateBookController = async (req: Request, res: Response): Promise
             isOnline,
             onlineFileUrl
         };
+
+        // An omitted ISBN means "leave it as it is", not "clear it" — a caller
+        // that never sends the field should not be able to destroy the stored
+        // value. Sending it empty is still an explicit clear.
+        if (isbn !== undefined) {
+            updateData.isbn = isbn || null;
+        }
 
         if (newTotal > currentTotal) {
             const copiesToAdd = newTotal - currentTotal;
