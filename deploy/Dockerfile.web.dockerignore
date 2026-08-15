@@ -1,0 +1,22 @@
+# Build context for Dockerfile.web is the directory holding all three repos.
+# Without this, Docker uploads every node_modules in it — ~275 MB and minutes
+# of "transferring context" on every single build.
+#
+# BuildKit looks for <dockerfile>.dockerignore before the context root's
+# .dockerignore, which is why this lives here and stays version-controlled
+# (the directory above Backend/ is not a repo).
+
+**/node_modules
+**/dist
+**/.git
+**/logs
+**/coverage
+**/*.log
+**/.env
+**/.env.*
+**/.vite
+**/.DS_Store
+
+# The web image needs only the two portals and the Caddyfile
+Backend/**
+!Backend/deploy/Caddyfile

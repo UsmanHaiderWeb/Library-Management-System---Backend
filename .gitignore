@@ -145,3 +145,7 @@ src/**/*.js
 
 # Winston log files
 logs/
+
+# Production deploy artifacts
+deploy/.env
+deploy/backups/

@@ -1,0 +1,143 @@
+# Full production stack: MySQL, Redis, the API and Caddy serving both portals.
+#
+#   cd Backend/deploy
+#   cp .env.example .env      # then fill it in
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   ./bootstrap.sh            # schema, college row, first librarian
+#
+# Unlike Backend/docker-compose.yml (development dependencies only), MySQL and
+# Redis publish no ports here. They are reachable on the compose network and
+# nowhere else — publishing 3306 on a public VM exposes the database to the
+# internet.
+
+name: lms
+
+services:
+  mysql:
+    image: mysql:lts
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD to match DATABASE_URL}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-lmsbackend}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Container hostnames, not localhost — these override anything in .env
+      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-lmsbackend}
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - api-logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api-docs/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # One-shot schema push. The Prisma CLI is a devDependency and so is absent
+  # from the runtime image; this reuses the build stage, which has it.
+  # Run explicitly, never on `up`:
+  #   docker compose -f docker-compose.prod.yml --profile tools run --rm migrate
+  migrate:
+    profiles: ["tools"]
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: build
+    command: ["npx", "prisma", "db", "push", "--skip-generate"]
+    environment:
+      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-lmsbackend}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  web:
+    build:
+      # Context is the directory holding all three repos, so the portals can be
+      # built from here. Clone Backend, Admin and Student as siblings.
+      context: ../..
+      dockerfile: Backend/deploy/Dockerfile.web
+      args:
+        VITE_COLLEGE_CODE: ${COLLEGE_CODE:?set COLLEGE_CODE — it is baked into the student build}
+    restart: unless-stopped
+    environment:
+      STUDENT_HOST: ${STUDENT_HOST:?set STUDENT_HOST}
+      ADMIN_HOST: ${ADMIN_HOST:?set ADMIN_HOST}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL for certificate notices}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+
+  # Nightly dump at 02:00, keeping 14 days. The database is the product; this
+  # is the smallest thing that stops a bad afternoon from becoming a disaster.
+  # Copy the files off this machine as well — a backup on the same disk is not
+  # a backup.
+  backup:
+    image: mysql:lts
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-lmsbackend}
+    volumes:
+      - ./backups:/backups
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        while true; do
+          now=$$(date +%s); target=$$(date -d 'tomorrow 02:00' +%s 2>/dev/null || echo $$((now + 86400)))
+          sleep $$(( target - now ))
+          f=/backups/lms-$$(date +%Y%m%d-%H%M%S).sql.gz
+          mysqldump -h mysql -uroot -p"$$MYSQL_ROOT_PASSWORD" --single-transaction \
+            --routines --triggers "$$MYSQL_DATABASE" | gzip > "$$f" \
+            && echo "backup written: $$f" \
+            || echo "BACKUP FAILED $$(date -Is)"
+          find /backups -name 'lms-*.sql.gz' -mtime +14 -delete
+        done
+
+volumes:
+  mysql-data:
+  redis-data:
+  api-logs:
+  caddy-data:
+  caddy-config:

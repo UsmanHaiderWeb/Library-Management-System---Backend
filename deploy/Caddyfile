@@ -1,0 +1,60 @@
+# Serves both portals and forwards their API calls to the backend.
+#
+# Certificates are obtained and renewed automatically for any real hostname —
+# nothing to configure beyond pointing DNS at this machine. For a demo with no
+# domain, sslip.io hostnames resolve to the IP inside them and still get a real
+# certificate, e.g. library.203.0.113.5.sslip.io
+#
+# Both portals are served same-origin with their API, so CORS never applies to
+# them. CORS_ORIGINS on the backend only matters for other callers.
+{
+	email {$ACME_EMAIL}
+}
+
+(spa) {
+	encode gzip zstd
+
+	# The API and the CSV templates it serves. Everything else is the SPA.
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+	handle /templates/* {
+		reverse_proxy api:3000
+	}
+
+	handle {
+		root * {args[0]}
+		# Hashed asset filenames are immutable. Everything else resolves to
+		# index.html and must never be cached, or a browser keeps asking for
+		# chunk names a new deploy has already replaced — the blank-page bug.
+		# Matched on the request path, so it has to be written as "not assets"
+		# rather than "/index.html": a visit to /book/x never mentions it.
+		@assets path /assets/*
+		@html not path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		header @html Cache-Control "no-cache"
+
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
+
+{$STUDENT_HOST} {
+	import spa /srv/student
+}
+
+{$ADMIN_HOST} {
+	# Swagger lives with the librarian portal rather than the student one so the
+	# API reference is not advertised to every visitor.
+	handle /api-docs* {
+		reverse_proxy api:3000
+	}
+	import spa /srv/admin
+}

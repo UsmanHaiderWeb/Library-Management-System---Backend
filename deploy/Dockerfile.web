@@ -1,0 +1,41 @@
+# Builds both portals and bakes them into a Caddy image that serves each on its
+# own hostname and forwards /api to the API container.
+#
+# Build context is the directory holding all three repos:
+#
+#   LibraryManagementSystem/
+#     Backend/   Admin/   Student/
+#
+# so it must be run from there, not from Backend/. docker-compose.prod.yml
+# already sets `context: ../..`.
+
+# ---------------------------------------------------------------- admin
+FROM node:22-alpine AS admin
+WORKDIR /app
+COPY Admin/package*.json ./
+RUN npm ci
+COPY Admin/ ./
+# The portal calls /api relatively and Caddy proxies it, so no API URL is
+# needed here. Set VITE_API_BASE_URL only if the API is on another origin.
+ARG VITE_API_BASE_URL=""
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+RUN npm run build
+
+# ---------------------------------------------------------------- student
+FROM node:22-alpine AS student
+WORKDIR /app
+COPY Student/package*.json ./
+RUN npm ci
+COPY Student/ ./
+# Baked in at build time: the axios interceptor stamps this college code onto
+# every request. One build per college.
+ARG VITE_COLLEGE_CODE
+ENV VITE_COLLEGE_CODE=$VITE_COLLEGE_CODE
+RUN test -n "$VITE_COLLEGE_CODE" || (echo "VITE_COLLEGE_CODE build arg is required" && exit 1) \
+    && npm run build
+
+# ---------------------------------------------------------------- serve
+FROM caddy:2-alpine
+COPY --from=admin /app/dist /srv/admin
+COPY --from=student /app/dist /srv/student
+COPY Backend/deploy/Caddyfile /etc/caddy/Caddyfile
