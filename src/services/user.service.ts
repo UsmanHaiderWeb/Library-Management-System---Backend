@@ -75,6 +75,8 @@ export class UserService {
 
         const users = await prisma.user.findMany({
             where: whereClause,
+            // Total order (id tie-break) so paging cannot repeat or skip a row
+            orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
             skip: pageNumber * pageSize,
             take: pageSize,
             select: {

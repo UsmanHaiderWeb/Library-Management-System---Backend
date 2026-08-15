@@ -2,7 +2,35 @@
 import { prisma } from '../helpers/prismaDb';
 import { getDateRangeQuery } from '../helpers/dateUtils';
 
+export type BookSort = 'newest' | 'popular' | 'title';
+
 export class BookService {
+    /**
+     * Ordering for a listing.
+     *
+     * Every option ends with `id` so the order is *total*. Without a
+     * tie-break, rows that share a sort value have no defined order, and
+     * LIMIT/OFFSET paging over them can repeat a book on one page and skip it
+     * on the next — invisible with 20 books, very visible with 10,000.
+     */
+    private static orderFor(sort: BookSort) {
+        switch (sort) {
+            case 'popular':
+                // Most requested first; a proxy for demand until borrow
+                // history is rich enough to rank on.
+                return [
+                    { BorrowedRequests: { _count: 'desc' as const } },
+                    { createdAt: 'desc' as const },
+                    { id: 'asc' as const },
+                ];
+            case 'title':
+                return [{ bookName: 'asc' as const }, { id: 'asc' as const }];
+            case 'newest':
+            default:
+                return [{ createdAt: 'desc' as const }, { id: 'asc' as const }];
+        }
+    }
+
     /**
      * Get all books with advanced filtering and pagination
      */
@@ -16,6 +44,7 @@ export class BookService {
         pageSize?: number;
         fromDate?: string;
         toDate?: string;
+        sort?: BookSort;
     }) {
         const {
             collegeId,
@@ -26,7 +55,8 @@ export class BookService {
             availableOnly,
             pageSize = 20,
             fromDate,
-            toDate
+            toDate,
+            sort = 'newest'
         } = params;
 
         const whereClause: any = {};
@@ -71,6 +101,7 @@ export class BookService {
 
         const books = await prisma.book.findMany({
             where: whereClause,
+            orderBy: this.orderFor(sort),
             skip: pageNumber * pageSize,
             take: pageSize,
             select: {
@@ -144,6 +175,84 @@ export class BookService {
             select: this.bookDetailSelect,
         });
         return current ? { ...current, redirectTo: current.slug ?? current.id } : null;
+    }
+
+    /**
+     * Books to suggest alongside the one being viewed.
+     *
+     * Content-based and deliberately simple: same author scores highest, then
+     * shared genre, with available copies preferred. No model, no training —
+     * with a few thousand books and sparse borrowing history this beats
+     * anything learned, and it works on day one of an install when there is no
+     * history at all.
+     *
+     * Ranking happens in SQL-sized chunks rather than one clever query so the
+     * intent stays readable.
+     */
+    static async getRelatedBooks(bookId: string, collegeId: string | null | undefined, limit = 6) {
+        const book = await prisma.book.findUnique({
+            where: { id: bookId },
+            select: { id: true, author: true, genre: true },
+        });
+        if (!book) return [];
+
+        const genres = (book.genre || '')
+            .split(',')
+            .map((g) => g.trim())
+            .filter(Boolean)
+            .slice(0, 4);
+
+        const listSelect = {
+            id: true,
+            slug: true,
+            bookName: true,
+            author: true,
+            genre: true,
+            image: true,
+            bgColor: true,
+        } as const;
+
+        const base = { collegeId: collegeId ?? null, NOT: { id: bookId } };
+
+        const [sameAuthor, sameGenre] = await Promise.all([
+            prisma.book.findMany({
+                where: { ...base, author: book.author },
+                select: listSelect,
+                orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+                take: limit,
+            }),
+            genres.length
+                ? prisma.book.findMany({
+                    where: { ...base, OR: genres.map((g) => ({ genre: { contains: g } })) },
+                    select: listSelect,
+                    orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+                    take: limit * 2,
+                })
+                : Promise.resolve([]),
+        ]);
+
+        // Same author first, then genre matches, de-duplicated
+        const merged = [...sameAuthor, ...sameGenre];
+        const seen = new Set<string>();
+        const unique = merged.filter((b) => (seen.has(b.id) ? false : seen.add(b.id)));
+
+        // Nothing closely related — pad with what other students borrow most,
+        // which is a better guess than simply the newest arrivals.
+        if (unique.length < limit) {
+            const filler = await prisma.book.findMany({
+                where: { ...base, NOT: { id: { in: [bookId, ...unique.map((b) => b.id)] } } },
+                select: listSelect,
+                orderBy: [
+                    { BorrowedRequests: { _count: 'desc' } },
+                    { createdAt: 'desc' },
+                    { id: 'asc' },
+                ],
+                take: limit - unique.length,
+            });
+            unique.push(...filler);
+        }
+
+        return unique.slice(0, limit);
     }
 
     /** Shared projection so every lookup path returns the same shape. */

@@ -48,6 +48,25 @@ Inside `$transaction`: database writes that must be atomic together, using the `
 
 `scripts/api-smoke.js` creates every object through the public API, so it catches contract and transaction bugs unit tests cannot. It marks its three unavoidable direct-DB steps with `[DB]` (college provisioning, reading the emailed OTP, back-dating a due date to simulate time passing). Run it after any change to auth, borrowing, or fines.
 
+## Catalogue listing and suggestions
+
+Every paginated `findMany` **must** have an `orderBy` ending in a unique
+column (`id`). Without a total order, `LIMIT/OFFSET` can return the same row on
+two pages and skip another — invisible at 20 books, very visible at 10,000.
+`BookService.orderFor()` holds the catalogue orderings (`newest` / `popular` /
+`title`); `@@index([collegeId, createdAt])` backs the default.
+
+Suggestions (`getRelatedBooks`) are content-based on purpose: same author, then
+shared genre, padded with most-borrowed. No model — with a few thousand books
+and sparse borrowing it beats anything learned, and it works on day one when
+there is no history. If ranking ever needs to improve, the next step is
+item-to-item co-borrow counts precomputed by the nightly cron, not ML. Note
+`BorrowedBook` points at `BookCopy`, so any co-borrow query hops through copies.
+
+Not yet needed, do when it hurts: keyset pagination (OFFSET depth cost was
+unmeasurable at 600 books), a FULLTEXT index for search (currently `LIKE
+'%x%'`, unindexable), and normalising the comma-separated `genre` column.
+
 ## Book URLs are slugs
 
 `Book.slug` is derived from the title and unique per college. Renaming a book

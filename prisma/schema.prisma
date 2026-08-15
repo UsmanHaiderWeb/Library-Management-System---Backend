@@ -53,6 +53,11 @@ model Book {
   @@unique([collegeId, slug])
   @@index([id, collegeId])
   @@index([collegeId], map: "Book_collegeId_fkey")
+  /// Default catalogue ordering: newest first within a college. Without this
+  /// MySQL filesorts the whole table on every page of an infinite scroll.
+  @@index([collegeId, createdAt])
+  /// Alphabetical browse
+  @@index([collegeId, bookName(length: 100)])
 }
 
 /// Every slug a book has ever had, so links shared before a rename still

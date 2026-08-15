@@ -7,6 +7,7 @@ import { updateBookController } from '../controllers/bookControllers/updateBookC
 
 import { studentAuthMiddleware } from '../middlewares/studentAuthMiddleware';
 import { getDigitalFileController } from '../controllers/bookControllers/getDigitalFileController';
+import { getRelatedBooksController } from '../controllers/bookControllers/getRelatedBooksController';
 import { getBookDetailsController } from '../controllers/bookControllers/getBookDetailsController';
 import { borrowBookController } from '../controllers/bookControllers/borrowBookController';
 import { getPublicBooksController } from '../controllers/bookControllers/getPublicBooksController';
@@ -17,6 +18,7 @@ export const bookRouter = express.Router();
 // public routes
 bookRouter.get('/all', getPublicBooksController as RequestHandler);
 bookRouter.get('/getBookDetails/:bookId', getBookDetailsController as RequestHandler);
+bookRouter.get('/:bookId/related', getRelatedBooksController as RequestHandler);
 
 // Digital Access (Secure)
 bookRouter.get('/digital/:bookId', studentAuthMiddleware, getDigitalFileController as RequestHandler);
