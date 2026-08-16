@@ -1,0 +1,173 @@
+# Runs the whole system from prebuilt images. Nothing is compiled here.
+#
+#   docker compose -f docker-compose.ghcr.yml pull
+#   docker compose -f docker-compose.ghcr.yml up -d
+#   ./bootstrap.sh                    # first run only
+#
+# The server needs three files and nothing else — this one, Caddyfile, and
+# .env. No source checkout, no node_modules, no build. Images come from GHCR,
+# built by GitHub Actions in each of the three repos.
+#
+# Tuned to fit a 1 GB VM (an Azure for Students B1s, for example). See
+# docker-compose.prod.yml for the build-it-here variant.
+
+name: lms
+
+services:
+  mysql:
+    image: mysql:lts
+    restart: unless-stopped
+    # Defaults assume a database server with the machine to itself. On 1 GB
+    # shared with everything else, performance_schema alone costs ~200 MB.
+    command: >
+      --innodb-buffer-pool-size=128M
+      --performance-schema=OFF
+      --max-connections=60
+      --innodb-flush-method=O_DIRECT
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD to match DATABASE_URL}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-lmsbackend}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # noeviction on purpose. Redis holds email verification codes
+    # (user:<id>:code) alongside cache — an LRU policy would silently discard
+    # them under pressure and students would simply never be able to verify.
+    # A full Redis erroring loudly is far better than that. The real working
+    # set here is a few hundred keys, so 96 MB is never reached.
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 96mb
+      --maxmemory-policy noeviction
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: ghcr.io/${GHCR_OWNER:?set GHCR_OWNER to your github username, lowercase}/lms-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Container hostnames — these override whatever .env says
+      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-lmsbackend}
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - api-logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api-docs/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # The two portal images carry nothing but /dist. These one-shot containers
+  # unpack them into the volume Caddy serves, then exit. Running one web
+  # server per portal would work too, but this keeps a single Caddy and a
+  # single Caddyfile owning all routing and TLS.
+  student-assets:
+    image: ghcr.io/${GHCR_OWNER}/lms-student:${IMAGE_TAG:-latest}
+    command: sh -c "rm -rf /srv/student && mkdir -p /srv/student && cp -a /dist/. /srv/student/"
+    volumes:
+      - web-root:/srv
+    restart: "no"
+
+  admin-assets:
+    image: ghcr.io/${GHCR_OWNER}/lms-admin:${IMAGE_TAG:-latest}
+    command: sh -c "rm -rf /srv/admin && mkdir -p /srv/admin && cp -a /dist/. /srv/admin/"
+    volumes:
+      - web-root:/srv
+    restart: "no"
+
+  web:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      STUDENT_HOST: ${STUDENT_HOST:?set STUDENT_HOST}
+      ADMIN_HOST: ${ADMIN_HOST:?set ADMIN_HOST}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL for certificate notices}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - web-root:/srv
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      student-assets:
+        condition: service_completed_successfully
+      admin-assets:
+        condition: service_completed_successfully
+      api:
+        condition: service_started
+
+  # Nightly dump at 02:00, keeping 14 days. The database is the product.
+  # Copy these off the machine too — a backup on the same disk is not a backup.
+  backup:
+    image: mysql:lts
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-lmsbackend}
+    volumes:
+      - ./backups:/backups
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        while true; do
+          now=$$(date +%s); target=$$(date -d 'tomorrow 02:00' +%s 2>/dev/null || echo $$((now + 86400)))
+          sleep $$(( target - now ))
+          f=/backups/lms-$$(date +%Y%m%d-%H%M%S).sql.gz
+          mysqldump -h mysql -uroot -p"$$MYSQL_ROOT_PASSWORD" --single-transaction \
+            --routines --triggers "$$MYSQL_DATABASE" | gzip > "$$f" \
+            && echo "backup written: $$f" \
+            || echo "BACKUP FAILED $$(date -Is)"
+          find /backups -name 'lms-*.sql.gz' -mtime +14 -delete
+        done
+
+  # One-shot schema push, run explicitly and never on `up`:
+  #   docker compose -f docker-compose.ghcr.yml --profile tools run --rm migrate
+  # The API image ships prisma/ and the Prisma CLI, so this needs no download
+  # and works on a server with no npm registry access.
+  migrate:
+    profiles: ["tools"]
+    image: ghcr.io/${GHCR_OWNER}/lms-api:${IMAGE_TAG:-latest}
+    entrypoint: ["node", "node_modules/prisma/build/index.js", "db", "push", "--skip-generate"]
+    environment:
+      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-lmsbackend}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
+  redis-data:
+  api-logs:
+  web-root:
+  caddy-data:
+  caddy-config:

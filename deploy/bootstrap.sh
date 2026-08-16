@@ -14,7 +14,12 @@
 set -euo pipefail
 
 cd "$(dirname "$0")"
-COMPOSE="docker compose -f docker-compose.prod.yml"
+
+# Defaults to the prebuilt-image stack. Override for the build-it-here one:
+#   COMPOSE_FILE_NAME=docker-compose.prod.yml ./bootstrap.sh
+COMPOSE_FILE_NAME="${COMPOSE_FILE_NAME:-docker-compose.ghcr.yml}"
+[ -f "$COMPOSE_FILE_NAME" ] || { echo "no $COMPOSE_FILE_NAME in $(pwd)"; exit 1; }
+COMPOSE="docker compose -f $COMPOSE_FILE_NAME"
 
 [ -f .env ] || { echo "no .env here — copy .env.example and fill it in first"; exit 1; }
 
