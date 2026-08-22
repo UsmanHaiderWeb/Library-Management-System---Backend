@@ -85,16 +85,23 @@ services:
   # unpack them into the volume Caddy serves, then exit. Running one web
   # server per portal would work too, but this keeps a single Caddy and a
   # single Caddyfile owning all routing and TLS.
+  #
+  # They copy over the top rather than wiping first. A tab open across a
+  # deployment still holds the previous index.html and asks for the chunk
+  # filenames it named; deleting those mid-session breaks the page the user is
+  # already on. Filenames are content-hashed so nothing collides, index.html is
+  # overwritten as it should be, and assets untouched for a week are pruned so
+  # the volume does not grow without end.
   student-assets:
     image: ghcr.io/${GHCR_OWNER}/lms-student:${IMAGE_TAG:-latest}
-    command: sh -c "rm -rf /srv/student && mkdir -p /srv/student && cp -a /dist/. /srv/student/"
+    command: sh -c "mkdir -p /srv/student && cp -a /dist/. /srv/student/ && find /srv/student -type f -mtime +7 -delete 2>/dev/null; true"
     volumes:
       - web-root:/srv
     restart: "no"
 
   admin-assets:
     image: ghcr.io/${GHCR_OWNER}/lms-admin:${IMAGE_TAG:-latest}
-    command: sh -c "rm -rf /srv/admin && mkdir -p /srv/admin && cp -a /dist/. /srv/admin/"
+    command: sh -c "mkdir -p /srv/admin && cp -a /dist/. /srv/admin/ && find /srv/admin -type f -mtime +7 -delete 2>/dev/null; true"
     volumes:
       - web-root:/srv
     restart: "no"
