@@ -5,6 +5,7 @@ import { validationResult } from 'express-validator';
 import { prisma } from '../../helpers/prismaDb';
 import { redisClient } from '../../helpers/redisClient';
 import logger from '../../helpers/logger';
+import { EmailService } from '../../services/email.service';
 
 // Login controller
 export const loginController = async (req: Request, res: Response): Promise<void> => {
@@ -74,9 +75,16 @@ export const loginController = async (req: Request, res: Response): Promise<void
             });
             await redisClient.expire(`user:${user.id}:code`, 60 * 60 * 2);
 
+            // The code was generated and stored above but never actually sent
+            // -- the response claimed an email had gone out while nothing had.
+            // Fire-and-forget so a dead mail server cannot delay or fail the
+            // login; "resend code" is the fallback when it never arrives.
+            EmailService.sendVerificationCode(user.email, code.toString())
+                .catch((emailError) => logger.error('Verification email failed on login:', emailError));
+
             // send the response
             res.status(200).json({
-                message: 'An email has been sent to you to verify your email',
+                message: 'Your email is not verified yet. We have sent you a verification code.',
                 temporaryToken: token
             });
             return;

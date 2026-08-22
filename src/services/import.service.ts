@@ -4,6 +4,7 @@ import csv from 'csv-parser';
 import { prisma } from '../helpers/prismaDb';
 import bcrypt from 'bcryptjs';
 import { UserRole } from '@prisma/client';
+import { generateUniqueSlug } from '../helpers/slug';
 
 export class ImportService {
     /**
@@ -18,9 +19,29 @@ export class ImportService {
                 .on('data', (data) => results.push(data))
                 .on('end', async () => {
                     try {
+                        // Slugs are resolved before the transaction opens.
+                        // generateUniqueSlug runs two queries per title, and a
+                        // few hundred of those inside an interactive
+                        // transaction would sail past Prisma's 5s timeout.
+                        // `claimed` keeps two books in the same file from
+                        // taking the same slug, which the database alone
+                        // cannot prevent mid-transaction.
+                        const claimed = new Set<string>();
+                        const slugs: string[] = [];
+                        for (const row of results) {
+                            let slug = await generateUniqueSlug(row.bookName, collegeId);
+                            if (claimed.has(slug)) {
+                                let n = 2;
+                                while (claimed.has(`${slug}-${n}`)) n++;
+                                slug = `${slug}-${n}`;
+                            }
+                            claimed.add(slug);
+                            slugs.push(slug);
+                        }
+
                         const importedBooks = await prisma.$transaction(async (tx) => {
                             const books = [];
-                            for (const row of results) {
+                            for (const [index, row] of results.entries()) {
                                 const totalBooks = parseInt(row.totalBooks) || 1;
 
                                 const createdBook = await tx.book.create({
@@ -30,7 +51,12 @@ export class ImportService {
                                         summary: row.summary || '',
                                         author: row.author,
                                         genre: row.genre,
-                                        image: '',
+                                        // The CSV template has always
+                                        // documented an image column; it was
+                                        // read and then thrown away, so every
+                                        // imported book had a blank cover.
+                                        image: row.image || '',
+                                        slug: slugs[index],
                                         totalBooks: totalBooks,
                                         almirahNumber: parseInt(row.almirahNumber) || 0,
                                         shelfNumber: parseInt(row.shelfNumber) || 0,
