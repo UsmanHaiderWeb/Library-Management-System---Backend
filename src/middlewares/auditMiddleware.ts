@@ -9,6 +9,7 @@ const ACTION_MAP: Record<string, { action: string; entity: string }> = {
   // Account verification
   'POST /api/admin/verify-account': { action: 'APPROVE_ACCOUNT', entity: 'User' },
   'POST /api/admin/deny-account': { action: 'DENY_ACCOUNT', entity: 'User' },
+  'POST /api/admin/verify-student-email': { action: 'VERIFY_STUDENT_EMAIL', entity: 'User' },
 
   // User management
   'PATCH /api/admin/update-user-role': { action: 'UPDATE_ROLE', entity: 'User' },

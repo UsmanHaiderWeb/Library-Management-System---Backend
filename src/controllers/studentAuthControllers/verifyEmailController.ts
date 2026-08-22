@@ -6,6 +6,7 @@ import { redisClient } from '../../helpers/redisClient';
 import { VerificationToken } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import logger from '../../helpers/logger';
+import { devOtpCode } from '../../config';
 
 export const verifyEmailController = async (req: express.Request, res: express.Response): Promise<void> => {
     try {
@@ -38,11 +39,24 @@ export const verifyEmailController = async (req: express.Request, res: express.R
         }
 
 
+        // Development escape hatch: a fixed code that verifies any account, so
+        // local work and demos are not blocked on a working mail server. Needs
+        // DEV_OTP_CODE set *and* NODE_ENV=development -- see devOtpCode().
+        const devCode = devOtpCode();
+        const usingDevCode = devCode !== null && verificationCode === devCode;
+        if (usingDevCode) {
+            logger.warn(
+                `DEV_OTP_CODE accepted for ${decodedUserData.email}. This must never be set in production.`,
+            );
+        }
+
         // Find the verification token in redis or in the database (if not present in redis)
-        let verificationCodeFromDB: VerificationToken | null;
-        const verificationCodeDocumentFromRedis = await redisClient.hgetall(`user:${decodedUserData.userId}:code`);
-        
-        if(!verificationCodeDocumentFromRedis.code || !verificationCodeDocumentFromRedis.id || (verificationCodeDocumentFromRedis.code != verificationCode)){
+        let verificationCodeFromDB: VerificationToken | null = null;
+        const verificationCodeDocumentFromRedis = usingDevCode
+            ? { code: '', id: '' }
+            : await redisClient.hgetall(`user:${decodedUserData.userId}:code`);
+
+        if(!usingDevCode && (!verificationCodeDocumentFromRedis.code || !verificationCodeDocumentFromRedis.id || (verificationCodeDocumentFromRedis.code != verificationCode))){
             verificationCodeFromDB = await prisma.verificationToken.findFirst({
                 where: {
                     userId: decodedUserData.userId,
@@ -77,11 +91,13 @@ export const verifyEmailController = async (req: express.Request, res: express.R
                 }
             });
 
-            // Delete the used verification token
-            if (verificationCodeDocumentFromRedis.id || (verificationCodeFromDB as VerificationToken).id) {
+            // Delete the used verification token. The dev code is not a
+            // stored token, so there is nothing to consume.
+            const usedTokenId = verificationCodeDocumentFromRedis.id || verificationCodeFromDB?.id;
+            if (usedTokenId) {
                 await tx.verificationToken.delete({
                     where: {
-                        id: verificationCodeDocumentFromRedis.id || (verificationCodeFromDB as VerificationToken).id,
+                        id: usedTokenId,
                         userId: decodedUserData.userId
                     }
                 });

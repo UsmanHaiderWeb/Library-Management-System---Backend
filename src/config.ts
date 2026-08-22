@@ -15,6 +15,13 @@ const envSchema = z.object({
     // Set this per college install to the portals' real addresses.
     CORS_ORIGINS: z.string().optional(),
 
+    // A fixed code that verifies any email, so development and demos do not
+    // need working SMTP. Deliberately opt-in rather than derived from
+    // NODE_ENV: that defaults to 'development', so an install which simply
+    // forgot to set it would otherwise ship a working backdoor. It takes both
+    // this variable AND NODE_ENV=development to enable.
+    DEV_OTP_CODE: z.string().length(6).optional(),
+
     EMAIL_HOST: z.string().default('smtp.gmail.com'),
     EMAIL_PORT: z.string().default('587'),
     EMAIL_USER: z.string().optional(),
@@ -60,3 +67,11 @@ export const corsOrigins: string[] = Array.from(new Set(
 export const configVariables = {
     port: config.PORT,
 };
+
+/**
+ * True only when a fixed verification code is explicitly configured *and* the
+ * server is running in development. Two independent switches, both of which
+ * must be deliberate, because the failure mode is anyone verifying any email.
+ */
+export const devOtpCode = (): string | null =>
+    config.NODE_ENV === 'development' && config.DEV_OTP_CODE ? config.DEV_OTP_CODE : null;

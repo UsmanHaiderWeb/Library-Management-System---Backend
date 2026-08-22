@@ -21,7 +21,7 @@ import { updateUserRoleController } from '../controllers/adminControllers/update
 
 import { bulkImportBooksController, bulkImportUsersController } from '../controllers/adminControllers/bulkImportController';
 import { upload } from '../helpers/multer';
-import { getAllAccountRequestsController, approveAccountController, denyAccountController, getAdminUserDetailsController } from '../controllers/adminControllers/accountVerificationController';
+import { getAllAccountRequestsController, approveAccountController, denyAccountController, getAdminUserDetailsController, verifyStudentEmailController } from '../controllers/adminControllers/accountVerificationController';
 import { authRateLimiter } from '../middlewares/rateLimiter';
 import { getAnalyticsController } from '../controllers/adminControllers/analyticsController';
 import { getAllRenewalRequestsController, approveRenewalController, rejectRenewalController, getAllFinesController } from '../controllers/bookControllers/renewalController';
@@ -54,6 +54,9 @@ adminRouter.patch('/update-user-role/:userId', adminAuthMiddleware, updateUserRo
 // Account verification routes
 adminRouter.get('/getAllAccountRequests', adminAuthMiddleware, getAllAccountRequestsController);
 adminRouter.post('/verify-account/:userId', adminAuthMiddleware, approveAccountController as RequestHandler);
+// Confirms the email address on a student's behalf when the code cannot
+// reach them. Separate from approving the account -- different judgement.
+adminRouter.post('/verify-student-email/:userId', adminAuthMiddleware, verifyStudentEmailController as RequestHandler);
 adminRouter.post('/deny-account/:userId', adminAuthMiddleware, denyAccountController as RequestHandler);
 adminRouter.get('/getUserDetails/:userId', adminAuthMiddleware, getAdminUserDetailsController as RequestHandler);
 
