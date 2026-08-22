@@ -20,9 +20,15 @@ set -euo pipefail
 
 RG="${RG:-lms-rg}"
 VM="${VM:-lms}"
-# Closest Azure regions to Pakistan. uaenorth (Dubai) is the lowest latency;
-# centralindia (Pune) is a larger region with better capacity.
-REGION="${REGION:-uaenorth}"
+
+# Azure for Students restricts deployment to a policy-defined set of regions,
+# and the set differs between subscriptions. Asking for one outside it fails
+# every resource at once with RequestDisallowedByAzure, so rather than hardcode
+# a guess the script reads the policy and picks the closest allowed region.
+# This is the preference order, nearest to Pakistan first.
+REGION_PREFERENCE="${REGION_PREFERENCE:-uaenorth uaecentral centralindia southindia westindia qatarcentral southeastasia uksouth westeurope northeurope eastus}"
+# Set REGION explicitly to skip the whole negotiation.
+REGION="${REGION:-}"
 # B1s is the size covered by the Azure for Students free allowance
 # (750 hours/month for 12 months). Anything larger bills against the credit.
 SIZE="${SIZE:-Standard_B1s}"
@@ -37,6 +43,54 @@ az account show >/dev/null 2>&1 || { echo "Not signed in. Run: az login"; exit 1
 echo "==> subscription"
 az account show --query "{name:name, id:id}" -o tsv | sed 's/^/    /'
 
+# The built-in "Allowed locations" policy carries the permitted regions in a
+# listOfAllowedLocations parameter. It may be assigned at any scope above us,
+# hence --disable-scope-strict-match. Best effort: if nothing comes back we
+# proceed and let the create call be the judge.
+echo "==> allowed regions"
+ALLOWED=$(az policy assignment list --disable-scope-strict-match \
+    --query "[].parameters.listOfAllowedLocations.value[]" -o tsv 2>/dev/null \
+    | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]' | grep -v '^$' | sort -u || true)
+
+if [ -n "$ALLOWED" ]; then
+    echo "$ALLOWED" | paste -sd' ' - | fold -s -w 68 | sed 's/^/    /'
+else
+    echo "    (could not read the policy; proceeding anyway)"
+fi
+
+pick_region() {
+    # An explicit choice wins, even if we cannot verify it.
+    if [ -n "$REGION" ]; then echo "$REGION"; return; fi
+    if [ -z "$ALLOWED" ]; then echo "eastus"; return; fi
+    for candidate in $REGION_PREFERENCE; do
+        if echo "$ALLOWED" | grep -qx "$candidate"; then echo "$candidate"; return; fi
+    done
+    # Nothing preferred is permitted -- take whatever is.
+    echo "$ALLOWED" | head -n 1
+}
+
+REGION=$(pick_region)
+echo "==> using region $REGION"
+
+if [ -n "$ALLOWED" ] && ! echo "$ALLOWED" | grep -qx "$REGION"; then
+    echo
+    echo "WARNING: $REGION is not in the allowed list above."
+    echo "Azure will reject every resource with RequestDisallowedByAzure."
+    echo "Re-run with one of the regions listed, e.g.  REGION=<region> bash provision.sh"
+    echo
+fi
+
+# An earlier failed run may have left the group in a region we are no longer
+# using. Harmless -- a group's location is only metadata and it can hold
+# resources anywhere -- but worth saying out loud.
+EXISTING_RG_LOCATION=$(az group show --name "$RG" --query location -o tsv 2>/dev/null || true)
+if [ -n "$EXISTING_RG_LOCATION" ] && [ "$EXISTING_RG_LOCATION" != "$REGION" ]; then
+    echo
+    echo "NOTE: resource group $RG already exists in $EXISTING_RG_LOCATION, not $REGION."
+    echo "Resources will still be created in $REGION. To start completely clean:"
+    echo "    az group delete --name $RG --yes"
+    echo
+fi
 echo "==> resource group $RG in $REGION"
 az group create --name "$RG" --location "$REGION" --output none
 echo "    ok"
@@ -78,18 +132,43 @@ fi
 if [ "$VM_EXISTS" = true ]; then
     echo "==> vm $VM already exists -- leaving it alone"
 else
-    echo "==> creating vm $VM ($SIZE, $IMAGE)"
+    echo "==> creating vm $VM ($SIZE, $IMAGE) in $REGION"
     echo "    this takes a couple of minutes"
-    az vm create \
+    # Captured rather than streamed: az prints a full python traceback for a
+    # policy rejection, which buries the one line that matters.
+    if ! CREATE_LOG=$(az vm create \
         --resource-group "$RG" \
         --name "$VM" \
         --image "$IMAGE" \
         --size "$SIZE" \
+        --location "$REGION" \
         --admin-username "$ADMIN_USERNAME" \
         --generate-ssh-keys \
         --public-ip-sku Standard \
         --custom-data "$INIT" \
-        --output none
+        --only-show-errors \
+        --output none 2>&1); then
+
+        echo
+        if echo "$CREATE_LOG" | grep -q "RequestDisallowedByAzure"; then
+            echo "Azure refused $REGION: your subscription's policy does not allow it."
+            if [ -n "$ALLOWED" ]; then
+                echo "Regions you may use:"
+                echo "$ALLOWED" | tr '\n' ' ' | fold -s -w 68 | sed 's/^/    /'
+            fi
+            echo
+            echo "Pick one and re-run:"
+            echo "    REGION=<region> bash provision.sh"
+        elif echo "$CREATE_LOG" | grep -qiE "SkuNotAvailable|allocation failed|not available in"; then
+            echo "$SIZE is not available in $REGION right now."
+            echo "Try another allowed region, or a different size:"
+            echo "    REGION=<region> bash provision.sh"
+            echo "    SIZE=Standard_B1ms bash provision.sh"
+        else
+            echo "$CREATE_LOG" | tail -20
+        fi
+        exit 1
+    fi
     echo "    created"
 fi
 
