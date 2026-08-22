@@ -29,9 +29,10 @@ VM="${VM:-lms}"
 REGION_PREFERENCE="${REGION_PREFERENCE:-uaenorth uaecentral centralindia southindia westindia qatarcentral southeastasia eastasia malaysiawest uksouth westeurope northeurope polandcentral austriaeast swedencentral eastus}"
 # Set REGION explicitly to skip the whole negotiation.
 REGION="${REGION:-}"
-# B1s is the size covered by the Azure for Students free allowance
-# (750 hours/month for 12 months). Anything larger bills against the credit.
-SIZE="${SIZE:-Standard_B1s}"
+# Left empty on purpose: the capacity search below chooses the size, starting
+# from Standard_B1s (the one the Azure for Students free allowance covers).
+# Set SIZE explicitly to bypass the search.
+SIZE="${SIZE:-}"
 IMAGE="${IMAGE:-Ubuntu2404}"
 ADMIN_USERNAME="${ADMIN_USERNAME:-azureuser}"
 
@@ -60,25 +61,78 @@ else
     echo "    (could not read the policy; proceeding anyway)"
 fi
 
-pick_region() {
-    # An explicit choice wins, even if we cannot verify it.
-    if [ -n "$REGION" ]; then echo "$REGION"; return; fi
-    if [ -z "$ALLOWED" ]; then echo "eastus"; return; fi
-    for candidate in $REGION_PREFERENCE; do
-        if echo "$ALLOWED" | grep -qx "$candidate"; then echo "$candidate"; return; fi
+# Sizes worth trying, cheapest first. Only B1s is covered by the Azure for
+# Students free allowance; anything below it bills against the $100 credit,
+# which the script says out loud rather than quietly spending.
+SIZE_PREFERENCE="${SIZE_PREFERENCE:-Standard_B1s Standard_B1ms Standard_B2ls_v2 Standard_B2ats_v2 Standard_B2s}"
+
+# Regions and sizes both go in and out of capacity, and a region being
+# permitted by policy says nothing about whether it can actually give you a
+# B1s today. Asking beforehand costs one call per region and turns a failed
+# deployment into an informed choice.
+find_placement() {
+    local regions="$1" region size cache
+    cache=$(mktemp -d)
+    for region in $regions; do
+        az vm list-skus --location "$region" --resource-type virtualMachines --all \
+            --query "[?length(restrictions[?type=='Location'])==\`0\`].name" -o tsv 2>/dev/null \
+            | sort -u > "$cache/$region" || true
     done
-    # Nothing preferred is permitted -- take whatever is.
-    echo "$ALLOWED" | head -n 1
+    # Size-major on purpose: a free B1s one region further away beats a billed
+    # B1ms next door, and the latency difference between the permitted regions
+    # is small either way.
+    for size in $SIZE_PREFERENCE; do
+        for region in $regions; do
+            if grep -qx "$size" "$cache/$region" 2>/dev/null; then
+                echo "$region $size"
+                rm -rf "$cache"
+                return 0
+            fi
+        done
+    done
+    rm -rf "$cache"
+    return 1
 }
 
-REGION=$(pick_region)
-echo "==> using region $REGION"
+# Search order: preferred regions that the policy permits, then anything else
+# it permits.
+candidate_regions() {
+    local seen="" candidate
+    for candidate in $REGION_PREFERENCE; do
+        if [ -z "$ALLOWED" ] || echo "$ALLOWED" | grep -qx "$candidate"; then
+            echo "$candidate"; seen="$seen $candidate"
+        fi
+    done
+    if [ -n "$ALLOWED" ]; then
+        for candidate in $ALLOWED; do
+            case " $seen " in *" $candidate "*) ;; *) echo "$candidate" ;; esac
+        done
+    fi
+}
 
-if [ -n "$ALLOWED" ] && ! echo "$ALLOWED" | grep -qx "$REGION"; then
+if [ -n "$REGION" ] && [ -n "$SIZE" ]; then
+    echo "==> using $SIZE in $REGION (both set explicitly)"
+else
+    SEARCH=$( [ -n "$REGION" ] && echo "$REGION" || candidate_regions | tr '\n' ' ' )
+    echo "==> checking capacity in: $(echo $SEARCH | fold -s -w 60 | head -1)"
+    PLACEMENT=$(find_placement "$SEARCH" || true)
+    if [ -z "$PLACEMENT" ]; then
+        echo
+        echo "None of these regions can offer any of: $SIZE_PREFERENCE"
+        echo "Pick explicitly and re-run:  REGION=<region> SIZE=<size> bash provision.sh"
+        exit 1
+    fi
+    REGION=${PLACEMENT% *}
+    SIZE=${PLACEMENT#* }
+    echo "==> using $SIZE in $REGION"
+fi
+
+if [ "$SIZE" != "Standard_B1s" ]; then
     echo
-    echo "WARNING: $REGION is not in the allowed list above."
-    echo "Azure will reject every resource with RequestDisallowedByAzure."
-    echo "Re-run with one of the regions listed, e.g.  REGION=<region> bash provision.sh"
+    echo "NOTE: $SIZE is not the free-tier size (Standard_B1s), so it bills"
+    echo "against your \$100 student credit. It is also more comfortable for"
+    echo "MySQL and Redis than 1 GB. Delete the VM when the demo is over:"
+    echo "    az group delete --name $RG --yes"
     echo
 fi
 
