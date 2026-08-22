@@ -1,6 +1,6 @@
 #cloud-config
 # Runs once, on the VM's first boot. Installs Docker, adds swap, and fetches
-# the three deployment files from the public repo — so a freshly created VM is
+# the three deployment files from the public repo -- so a freshly created VM is
 # ready for `docker compose up` without anything being copied to it by hand.
 #
 # It deliberately does NOT start the stack: .env has to be filled in with real
@@ -51,7 +51,7 @@ write_files:
       echo "  4. ./bootstrap.sh"
 
 runcmd:
-  # Docker from Docker's own repository — Ubuntu's packaged docker.io has no
+  # Docker from Docker's own repository -- Ubuntu's packaged docker.io has no
   # compose plugin, which this deployment depends on.
   - install -m 0755 -d /etc/apt/keyrings
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
