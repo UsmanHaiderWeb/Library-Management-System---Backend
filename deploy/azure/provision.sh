@@ -26,7 +26,7 @@ VM="${VM:-lms}"
 # every resource at once with RequestDisallowedByAzure, so rather than hardcode
 # a guess the script reads the policy and picks the closest allowed region.
 # This is the preference order, nearest to Pakistan first.
-REGION_PREFERENCE="${REGION_PREFERENCE:-uaenorth uaecentral centralindia southindia westindia qatarcentral southeastasia uksouth westeurope northeurope eastus}"
+REGION_PREFERENCE="${REGION_PREFERENCE:-uaenorth uaecentral centralindia southindia westindia qatarcentral southeastasia eastasia malaysiawest uksouth westeurope northeurope polandcentral austriaeast swedencentral eastus}"
 # Set REGION explicitly to skip the whole negotiation.
 REGION="${REGION:-}"
 # B1s is the size covered by the Azure for Students free allowance
@@ -50,7 +50,9 @@ az account show --query "{name:name, id:id}" -o tsv | sed 's/^/    /'
 echo "==> allowed regions"
 ALLOWED=$(az policy assignment list --disable-scope-strict-match \
     --query "[].parameters.listOfAllowedLocations.value[]" -o tsv 2>/dev/null \
-    | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]' | grep -v '^$' | sort -u || true)
+    | tr '[:upper:]' '[:lower:]' \
+    | sed 's/[[:space:]]//g' \
+    | grep -v '^$' | sort -u || true)
 
 if [ -n "$ALLOWED" ]; then
     echo "$ALLOWED" | paste -sd' ' - | fold -s -w 68 | sed 's/^/    /'
@@ -80,20 +82,36 @@ if [ -n "$ALLOWED" ] && ! echo "$ALLOWED" | grep -qx "$REGION"; then
     echo
 fi
 
+# Second net. A malformed region reaches Azure as an opaque
+# LocationNotAvailableForResourceGroup several calls later, so check it
+# against the real list of regions first and say so plainly here.
+if ! az account list-locations --query "[].name" -o tsv 2>/dev/null | grep -qx "$REGION"; then
+    echo
+    echo "'$REGION' is not a real Azure region."
+    if [ -n "$ALLOWED" ]; then
+        echo "Your subscription's policy allows:"
+        echo "$ALLOWED" | sed 's/^/    /'
+    fi
+    echo
+    echo "Re-run picking one explicitly:  REGION=<region> bash provision.sh"
+    exit 1
+fi
 # An earlier failed run may have left the group in a region we are no longer
 # using. Harmless -- a group's location is only metadata and it can hold
-# resources anywhere -- but worth saying out loud.
+# resources anywhere -- so reuse it rather than issuing a create that would be
+# an update against a location the policy may now refuse.
 EXISTING_RG_LOCATION=$(az group show --name "$RG" --query location -o tsv 2>/dev/null || true)
-if [ -n "$EXISTING_RG_LOCATION" ] && [ "$EXISTING_RG_LOCATION" != "$REGION" ]; then
-    echo
-    echo "NOTE: resource group $RG already exists in $EXISTING_RG_LOCATION, not $REGION."
-    echo "Resources will still be created in $REGION. To start completely clean:"
-    echo "    az group delete --name $RG --yes"
-    echo
+if [ -n "$EXISTING_RG_LOCATION" ]; then
+    echo "==> resource group $RG exists (in $EXISTING_RG_LOCATION)"
+    if [ "$EXISTING_RG_LOCATION" != "$REGION" ]; then
+        echo "    resources go to $REGION regardless; to start clean instead:"
+        echo "    az group delete --name $RG --yes"
+    fi
+else
+    echo "==> resource group $RG in $REGION"
+    az group create --name "$RG" --location "$REGION" --output none
+    echo "    created"
 fi
-echo "==> resource group $RG in $REGION"
-az group create --name "$RG" --location "$REGION" --output none
-echo "    ok"
 
 # cloud-init needs the username substituted before upload.
 #
