@@ -2,7 +2,7 @@ import express, { RequestHandler } from 'express';
 import { validateLoginFieldsMiddleware, validateAdminSignupFieldsMiddleware } from '../middlewares/ValidateFormFields';
 import { adminSignupController } from '../controllers/adminAuthControllers/adminSignupController';
 import { adminLoginController } from '../controllers/adminAuthControllers/adminLoginController';
-import { adminAuthMiddleware } from '../middlewares/adminAuthMiddleware';
+import { adminAuthMiddleware, optionalAdminAuthMiddleware } from '../middlewares/adminAuthMiddleware';
 import { getAdminDetailsController } from '../controllers/adminControllers/getAdminDetails';
 import { getAllUsersController } from '../controllers/studentControllers/getAllUsers';
 import { getAllBooksController } from '../controllers/bookControllers/getAllBooksController';
@@ -32,7 +32,9 @@ import { getAuditLogsController, getAuditFiltersController } from '../controller
 export const adminRouter = express.Router();
 
 // Auth routes
-adminRouter.post('/signup', authRateLimiter, validateAdminSignupFieldsMiddleware, adminSignupController);
+// optionalAdminAuthMiddleware: open only until the first admin exists,
+// after that a signed-in admin is required (see AdminService.signup)
+adminRouter.post('/signup', authRateLimiter, optionalAdminAuthMiddleware, validateAdminSignupFieldsMiddleware, adminSignupController);
 adminRouter.post('/login', authRateLimiter, validateLoginFieldsMiddleware, adminLoginController);
 
 // admin routes

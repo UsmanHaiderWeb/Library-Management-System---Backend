@@ -107,3 +107,28 @@ export const adminAuthMiddleware = async (req: Request, res: Response, next: Nex
         return;
     }
 }
+/**
+ * Runs adminAuthMiddleware only when a token was actually supplied, and never
+ * rejects the request itself.
+ *
+ * Used by admin signup, which has to serve two callers with one route: the
+ * installer creating the very first librarian (no token yet, allowed exactly
+ * once) and an existing librarian adding a colleague (token required). The
+ * decision belongs to the service, which needs to know whether someone is
+ * signed in -- not whether they had to be.
+ */
+export const optionalAdminAuthMiddleware = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+): Promise<void> => {
+    const token = req?.headers?.authorization?.split('Bearer ')[1] || '';
+    if (!token) {
+        next();
+        return;
+    }
+
+    // A bad token must still fail loudly rather than silently downgrade to
+    // "not signed in", which would look like the open first-admin path.
+    await adminAuthMiddleware(req, res, next);
+};

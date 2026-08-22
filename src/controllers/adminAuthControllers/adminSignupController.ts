@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { AdminService } from '../../services/admin.service';
+import { RequestWithAdmin } from '../../helpers/interfaces';
 import logger from '../../helpers/logger';
 
 // Signup controller
@@ -16,7 +17,15 @@ export const adminSignupController = async (req: Request, res: Response): Promis
 
         const { email, password, name, collegeCode } = req.body;
 
-        const { token } = await AdminService.signup({ email, password, name, collegeCode });
+        // An admin already signed in may add a colleague; the open route may
+        // only ever create the first one. adminAuthMiddleware is optional on
+        // this route, so req.admin is set when a valid token was supplied.
+        const actingAdmin = (req as RequestWithAdmin).admin;
+
+        const { token } = await AdminService.signup(
+            { email, password, name, collegeCode },
+            Boolean(actingAdmin),
+        );
 
         res.status(201).json({
             message: 'Admin created successfully',
@@ -24,6 +33,12 @@ export const adminSignupController = async (req: Request, res: Response): Promis
         });
 
     } catch (error: any) {
+        if (error.message === 'Admin signup is closed') {
+            res.status(403).json({
+                message: 'This library already has an administrator. Ask them to create your account.',
+            });
+            return;
+        }
         if (error.message === 'Invalid college code.' || error.message === 'Admin already exists') {
             res.status(400).json({ message: error.message });
             return;

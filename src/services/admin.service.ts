@@ -7,7 +7,11 @@ export class AdminService {
     /**
      * Register a new admin
      */
-    static async signup(data: { email: string; password: string; name: string; collegeCode: string }) {
+    static async signup(
+        data: { email: string; password: string; name: string; collegeCode: string },
+        /** Set only by an authenticated admin adding a colleague. */
+        allowExisting = false,
+    ) {
         const { email, password, name, collegeCode } = data;
 
         // Check if college exists
@@ -17,6 +21,19 @@ export class AdminService {
 
         if (!college) {
             throw new Error('Invalid college code.');
+        }
+
+        // Self-service signup exists only to create the very first librarian
+        // during install. Leaving it open afterwards means anyone who knows the
+        // college code can mint themselves a full administrator -- and the code
+        // is compiled into the public student bundle, so that is everyone.
+        // Later librarians are created by an existing one.
+        const adminCount = await prisma.admin.count({
+            where: { collegeId: college.id }
+        });
+
+        if (adminCount > 0 && !allowExisting) {
+            throw new Error('Admin signup is closed');
         }
 
         // Check if admin already exists

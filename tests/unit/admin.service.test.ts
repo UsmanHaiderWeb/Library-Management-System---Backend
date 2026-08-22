@@ -7,6 +7,8 @@ jest.mock('../../src/helpers/prismaDb', () => ({
     admin: {
       findUnique: jest.fn(),
       create: jest.fn(),
+      // Signup is open only while a college has no admin at all
+      count: jest.fn(),
     },
     college: {
       findUnique: jest.fn(),
@@ -28,6 +30,8 @@ describe('AdminService', () => {
       };
 
       (prisma.college.findUnique as jest.Mock).mockResolvedValue({ id: 'college-id', code: 'COL1' });
+      // No admin yet, so the open first-librarian path applies
+      (prisma.admin.count as jest.Mock).mockResolvedValue(0);
       (prisma.admin.findUnique as jest.Mock).mockResolvedValue(null);
       (bcrypt.genSalt as jest.Mock).mockResolvedValue('salt');
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
