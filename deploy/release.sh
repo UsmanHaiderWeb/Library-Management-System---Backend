@@ -33,11 +33,23 @@ esac
 
 # ---------------------------------------------------------------- az, maybe
 # On Windows the CLI is a .bat in the venv, which bash will not find as `az`.
+# The venv's bash `az` shim breaks on the space in the profile path, and the
+# .bat has the same problem when cmd re-parses it -- but PowerShell runs the
+# CLI fine, and it is where the login token lives. Probe candidates until one
+# actually answers, PowerShell last as the reliable fallback.
 AZ=""
+az_try() { "$@" account show >/dev/null 2>&1; }
 for candidate in az az.bat az.cmd; do
-    if command -v "$candidate" >/dev/null 2>&1; then AZ="$candidate"; break; fi
+    if command -v "$candidate" >/dev/null 2>&1 && az_try "$candidate"; then AZ="$candidate"; break; fi
 done
-az_ready() { [ -n "$AZ" ] && "$AZ" account show >/dev/null 2>&1; }
+if [ -z "$AZ" ] && command -v powershell.exe >/dev/null 2>&1     && powershell.exe -NoProfile -Command "az account show" >/dev/null 2>&1; then
+    AZ="powershell-az"
+fi
+run_az() {
+    if [ "$AZ" = "powershell-az" ]; then powershell.exe -NoProfile -Command "az $*"
+    else "$AZ" "$@"; fi
+}
+az_ready() { [ -n "$AZ" ]; }
 
 ssh_up() { ssh "${SSH_OPTS[@]}" "$HOST" true 2>/dev/null; }
 
@@ -45,7 +57,7 @@ ssh_up() { ssh "${SSH_OPTS[@]}" "$HOST" true 2>/dev/null; }
 deallocate() {
     if az_ready; then
         echo "==> deallocating $VM (stops the compute meter)"
-        "$AZ" vm deallocate -g "$RG" -n "$VM" --output none
+        run_az vm deallocate -g "$RG" -n "$VM" --output none
         echo "    done. Disk + public IP still bill ~\$8-9/mo; that is the floor."
     else
         echo
@@ -70,7 +82,7 @@ if ssh_up; then
 else
     if az_ready; then
         echo "==> starting $VM (~30s)"
-        "$AZ" vm start -g "$RG" -n "$VM" --output none
+        run_az vm start -g "$RG" -n "$VM" --output none
     else
         echo "==> VM is off and az is not signed in here."
         echo "    Run this in the Azure Cloud Shell, then leave this script running:"
